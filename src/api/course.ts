@@ -4,7 +4,7 @@ const INJECT_SOURCE = 'AutoSchedulerInject';
 const WEB_SOURCE = 'AutoSchedulerWeb';
 const CACHE_KEY = 'autoSchedulerCoursesCacheV1';
 const DEFAULT_MAX_AGE_MS = 1 * 60 * 1000; // 1 minute
-const STATIC_FALLBACK_UPDATED_AT = Date.parse('2026-01-11T00:00:00+08:00');
+const STATIC_FALLBACK_UPDATED_AT = Date.parse('2026-07-18T00:00:00+08:00');
 
 let cachedCourses: Course[] | null = null;
 let cachedUpdatedAt: number | null = null;
@@ -265,9 +265,9 @@ async function fetchViaInject (timeoutMs = 4000): Promise<Course[] | null> {
         const form = new URLSearchParams({
             p_chapylx: '',
             ordertext_0: '',
-            p_xn: payload.year || '2025-2026',
-            p_xq: payload.term || '2',
-            p_xnxq: payload.xnxq || '2025-20262',
+            p_xn: payload.year || '2026-2027',
+            p_xq: payload.term || '1',
+            p_xnxq: payload.xnxq || '2026-20271',
             p_xiaoqu: payload.campus || '1',
             p_chaxunpylx: '3',
             mxpylx: '3',

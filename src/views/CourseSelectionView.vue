@@ -194,7 +194,7 @@
 
     const router = useRouter();
     const { courses: allCourses, lastUpdatedTs, isUpdating, loading, loadedCourseCount, refreshCourses, startAutoRefresh } = useCourseData();
-    const currentSemester = '2026 春季学期';
+    const currentSemester = '2026 秋季学期';
     const searchQuery = ref('');
     const searchResults = ref<Course[]>([]);
     const exampleKeywords = ['软件工程', '操作系统', '音乐赏析', '数学', '英语'];
