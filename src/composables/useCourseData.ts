@@ -5,6 +5,8 @@ import type { Course } from '@/types';
 
 const courses = ref<Course[]>([]);
 const lastUpdatedTs = ref<number | null>(null);
+const semesterLabel = ref<string>('当前学期');
+const dataSource = ref<'inject' | 'static'>('static');
 const isUpdating = ref(false);
 const loading = ref(true);
 let autoTimer: number | null = null;
@@ -24,11 +26,13 @@ const syncSelectedCourses = (latest: Course[]) => {
 const refreshCourses = async (force = false) => {
     isUpdating.value = true;
     try {
-        const { courses: fetched, updatedAt } = await fetchCourses({ forceRefresh: force });
-        courses.value = fetched;
-        lastUpdatedTs.value = updatedAt;
-        syncSelectedCourses(fetched);
-        return fetched;
+        const meta = await fetchCourses({ forceRefresh: force });
+        courses.value = meta.courses;
+        lastUpdatedTs.value = meta.updatedAt;
+        semesterLabel.value = meta.semester.label;
+        dataSource.value = meta.source;
+        syncSelectedCourses(meta.courses);
+        return meta.courses;
     } finally {
         loading.value = false;
         isUpdating.value = false;
@@ -69,6 +73,8 @@ export function useCourseData () {
     return {
         courses,
         lastUpdatedTs,
+        semesterLabel,
+        dataSource,
         isUpdating,
         loading,
         loadedCourseCount,

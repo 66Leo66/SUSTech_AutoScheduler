@@ -50,10 +50,10 @@
 // @version 1.0
 // @grant  unsafeWindow
 // @grant  GM_xmlhttpRequest
-// @connect c.x-d.fun
+// @connect sustech-autoscheduler.pcl2.workers.dev
 // ==/UserScript==
 
-(()=>{const U='https://c.x-d.fun/inject.js',w=c=>{let f=document.querySelectorAll('iframe'),n=f.length;n?f.forEach(i=>i.addEventListener('load',()=>--n||c())):c()};w(()=>GM_xmlhttpRequest({method:'GET',url:U,onload:r=>new Function('unsafeWindow',r.responseText.trim())(unsafeWindow)}))})();`;
+(()=>{const U='https://sustech-autoscheduler.pcl2.workers.dev/inject.js',w=c=>{let f=document.querySelectorAll('iframe'),n=f.length;n?f.forEach(i=>i.addEventListener('load',()=>--n||c())):c()};w(()=>GM_xmlhttpRequest({method:'GET',url:U,onload:r=>new Function('unsafeWindow',r.responseText.trim())(unsafeWindow)}))})();`;
 
     const script = computed(() => props.script || defaultScript);
     const imageSrc = computed(() => props.image || img);

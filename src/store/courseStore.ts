@@ -1,8 +1,29 @@
 import { reactive, watch } from 'vue';
-import type { Course, CourseBundle } from '../types';
+import type { Course, CourseBundle, ScheduleAnalysis, IncompatibleCourseGroup } from '../types';
 import { getBaseCourseId, isLabId } from '@/utils/courseRelation';
 
 const STORAGE_KEY = 'sustech-course-selection';
+const BLOCKED_STORAGE_KEY = 'sustech-schedule-blocked-slots';
+
+function loadBlockedSlots (): string[] {
+    try {
+        const stored = localStorage.getItem(BLOCKED_STORAGE_KEY);
+        if (!stored) return [];
+        const parsed = JSON.parse(stored);
+        return Array.isArray(parsed) ? parsed.filter(v => typeof v === 'string') : [];
+    } catch (error) {
+        console.error('Failed to load blocked slots from localStorage:', error);
+        return [];
+    }
+}
+
+function saveBlockedSlots (slots: string[]) {
+    try {
+        localStorage.setItem(BLOCKED_STORAGE_KEY, JSON.stringify(slots));
+    } catch (error) {
+        console.error('Failed to save blocked slots to localStorage:', error);
+    }
+}
 
 // 从 localStorage 加载已选课程
 function loadSelectedCourses (): Course[] {
@@ -28,7 +49,11 @@ function saveSelectedCourses (courses: Course[]) {
 
 export const store = reactive({
     selectedCourses: loadSelectedCourses() as Course[],
+    blockedSlots: loadBlockedSlots() as string[],
     scheduleResults: [] as CourseBundle[][],
+    scheduleAnalyses: [] as ScheduleAnalysis[],
+    selectedGroupCount: 0,
+    topConflictHints: [] as IncompatibleCourseGroup[],
     currentResultIndex: 0,
 
     toggleCourseSelection (course: Course) {
@@ -91,9 +116,37 @@ export const store = reactive({
         saveSelectedCourses(this.selectedCourses);
     },
 
-    setResults (results: CourseBundle[][]) {
-        this.scheduleResults = results;
+    setResults (payload: { schedules: CourseBundle[][]; analyses?: ScheduleAnalysis[]; selectedGroupCount?: number; topConflictHints?: IncompatibleCourseGroup[] } | CourseBundle[][]) {
+        if (Array.isArray(payload)) {
+            this.scheduleResults = payload;
+            this.scheduleAnalyses = [];
+            this.selectedGroupCount = 0;
+            this.topConflictHints = [];
+            this.currentResultIndex = 0;
+            return;
+        }
+        this.scheduleResults = payload.schedules;
+        this.scheduleAnalyses = payload.analyses || [];
+        this.selectedGroupCount = payload.selectedGroupCount ?? 0;
+        this.topConflictHints = payload.topConflictHints || [];
         this.currentResultIndex = 0;
+    },
+
+    isBlockedSlot (week: 1 | 2, day: number, slotIndex: number) {
+        return this.blockedSlots.includes(`${week}-${day}-${slotIndex}`);
+    },
+
+    toggleBlockedSlot (week: 1 | 2, day: number, slotIndex: number) {
+        const key = `${week}-${day}-${slotIndex}`;
+        const idx = this.blockedSlots.indexOf(key);
+        if (idx >= 0) this.blockedSlots.splice(idx, 1);
+        else this.blockedSlots.push(key);
+        saveBlockedSlots(this.blockedSlots);
+    },
+
+    clearBlockedSlots () {
+        this.blockedSlots.splice(0, this.blockedSlots.length);
+        saveBlockedSlots(this.blockedSlots);
     },
 
     clearSelection () {
@@ -105,4 +158,8 @@ export const store = reactive({
 // 监听 selectedCourses 的变化,自动保存
 watch(() => store.selectedCourses, (newCourses) => {
     saveSelectedCourses(newCourses);
+}, { deep: true });
+
+watch(() => store.blockedSlots, (newSlots) => {
+    saveBlockedSlots(newSlots);
 }, { deep: true });

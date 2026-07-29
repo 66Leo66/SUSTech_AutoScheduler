@@ -98,7 +98,7 @@
         qxmc: '自动排课',
         qxmc_en: 'Auto Scheduling',
         sfsc: false,
-        url: 'https://c.x-d.fun',
+        url: 'https://sustech-autoscheduler.pcl2.workers.dev',
         xssx: 1,
         xtdm: 'xt01'
     };

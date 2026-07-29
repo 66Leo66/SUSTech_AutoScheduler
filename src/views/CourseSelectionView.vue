@@ -28,9 +28,10 @@
                     </el-input>
                     <div
                         style="margin: 6px 0 10px; font-size: 12px; color: var(--el-text-color-secondary); display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
-                        <span>当前学期：{{ currentSemester }}</span>
+                        <span>当前学期：{{ semesterLabel }}</span>
                         <span>已加载课程：{{ loadedCourseCount }} 门</span>
                         <span>上次更新：{{ lastUpdated }}</span>
+                        <span>数据来源：{{ dataSourceLabel }}</span>
                         <el-tag :type="statusTagType" size="small" effect="plain" :disable-transitions="true"
                             @click="handleStatusClick"
                             style="white-space: nowrap; flex-shrink: 0; display: inline-flex; align-items: center; cursor: pointer; flex-wrap: nowrap;">
@@ -59,6 +60,15 @@
                             </span>
                         </el-tag>
                     </div>
+                    <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                        <span style="font-size: 12px; color: var(--el-text-color-secondary);">结果列数</span>
+                        <el-radio-group v-model="preferredColumns" size="small">
+                            <el-radio-button :label="1">1</el-radio-button>
+                            <el-radio-button :label="2">2</el-radio-button>
+                            <el-radio-button :label="3">3</el-radio-button>
+                            <el-radio-button :label="4">4</el-radio-button>
+                        </el-radio-group>
+                    </div>
                 </div>
                 <el-scrollbar style="flex: 1; padding: 0 20px;">
                     <template v-if="loading">
@@ -85,32 +95,35 @@
                                     target="_blank" rel="noopener noreferrer">没有想要的课？去反馈</el-button>
                             </el-empty>
                         </div>
-                        <el-card v-for="course in searchResults" :key="course.id" shadow="hover"
-                            style="margin-bottom: 10px; cursor: pointer;"
-                            :class="{ 'is-selected': store.isSelected(course) }"
-                            :style="store.isSelected(course) ? { borderColor: 'var(--el-color-primary)', backgroundColor: 'var(--el-color-primary-light-9)' } : {}"
-                            @click="store.toggleCourseSelection(course)">
-                            <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
-                                <span style="font-weight: bold;">{{ course.kcmc }}</span>
-                                <el-tag v-if="store.isSelected(course)" size="small" type="success">已选</el-tag>
-                            </div>
-                            <div
-                                style="font-size: 13px; color: var(--el-text-color-regular); display: flex; justify-content: space-between;">
-                                <span>Code: {{ course.kcdm }}</span>
-                                <span>{{ course.dgjsmc }}</span>
-                            </div>
-                            <div
-                                style="font-size: 12px; color: var(--el-text-color-secondary); margin-top: 4px; display: flex; align-items: center; gap: 6px;">
-                                <span>人数：{{ formatCapacity(course) }}</span>
-                                <el-tag v-if="hasFullCapacity(course)" size="small" effect="plain"
-                                    :type="capacityStatusType(course)">
-                                    {{ capacityTagLabel(course) }}
-                                </el-tag>
-                            </div>
-                            <div style="font-size: 12px; color: var(--el-text-color-secondary); margin-top: 5px;">{{
-                                course.rwmc
-                            }}</div>
-                        </el-card>
+                        <div class="course-grid" :style="courseGridStyle">
+                            <el-card v-for="course in searchResults" :key="course.id" shadow="hover" class="course-card"
+                                :class="{ 'is-selected': store.isSelected(course) }"
+                                :style="store.isSelected(course) ? { borderColor: 'var(--el-color-primary)', backgroundColor: 'var(--el-color-primary-light-9)' } : {}"
+                                @click="store.toggleCourseSelection(course)">
+                                <div style="display: flex; justify-content: space-between; gap: 8px; margin-bottom: 4px;">
+                                    <span class="course-title">{{ course.kcmc }}</span>
+                                    <el-tag v-if="store.isSelected(course)" size="small" type="success">已选</el-tag>
+                                </div>
+                                <div class="course-line">
+                                    <span>Code: {{ course.kcdm }}</span>
+                                    <span class="course-ellipsis">{{ course.dgjsmc }}</span>
+                                </div>
+                                <div class="course-line course-secondary">
+                                    <span>人数：{{ formatCapacity(course) }}</span>
+                                    <span v-if="course.xf">学分：{{ course.xf }}</span>
+                                    <el-tag v-if="hasFullCapacity(course)" size="small" effect="plain"
+                                        :type="capacityStatusType(course)">
+                                        {{ capacityTagLabel(course) }}
+                                    </el-tag>
+                                </div>
+                                <div class="course-line course-secondary" v-if="formatTimeSummary(course).length">
+                                    <span class="course-ellipsis">{{ formatTimeSummary(course).join('；') }}</span>
+                                </div>
+                                <div class="course-line course-secondary">
+                                    <span class="course-ellipsis">{{ course.rwmc }}</span>
+                                </div>
+                            </el-card>
+                        </div>
                     </template>
                 </el-scrollbar>
             </el-main>
@@ -188,13 +201,13 @@
     import { store } from '../store/courseStore';
     import { arrangeSchedule } from '../utils/scheduleAlgo';
     import { isLabId, getBaseCourseId, hasCatalogLab, hasSelectedLab, hasSelectedLecture } from '@/utils/courseRelation';
+    import { formatCourseTimes } from '@/utils/timeCode';
     import type { Course } from '../types';
 
     useMobileDetection();
 
     const router = useRouter();
-    const { courses: allCourses, lastUpdatedTs, isUpdating, loading, loadedCourseCount, refreshCourses, startAutoRefresh } = useCourseData();
-    const currentSemester = '2026 秋季学期';
+    const { courses: allCourses, lastUpdatedTs, semesterLabel, dataSource, isUpdating, loading, loadedCourseCount, refreshCourses, startAutoRefresh } = useCourseData();
     const searchQuery = ref('');
     const searchResults = ref<Course[]>([]);
     const exampleKeywords = ['软件工程', '操作系统', '音乐赏析', '数学', '英语'];
@@ -202,6 +215,31 @@
     const generating = ref(false);
     const dragIndex = ref<number | null>(null);
     const injectConnected = ref(false);
+    const initialColumns = Number(localStorage.getItem('sustech-course-grid-columns') || 2);
+    const preferredColumns = ref<number>(Number.isFinite(initialColumns) ? Math.max(1, Math.min(4, initialColumns)) : 2);
+    const viewportWidth = ref(typeof window !== 'undefined' ? window.innerWidth : 1200);
+    const safePreferredColumns = computed({
+        get: () => {
+            const v = Number(preferredColumns.value);
+            if (!Number.isFinite(v) || v < 1) return 1;
+            if (v > 4) return 4;
+            return v;
+        },
+        set: (val: number) => {
+            preferredColumns.value = Math.max(1, Math.min(4, val));
+        }
+    });
+    const effectiveColumns = computed(() => {
+        if (viewportWidth.value < 900) return 1;
+        if (viewportWidth.value < 1200) return Math.min(2, safePreferredColumns.value);
+        return safePreferredColumns.value;
+    });
+    const courseGridStyle = computed(() => ({
+        display: 'grid',
+        gap: '8px',
+        gridTemplateColumns: `repeat(${effectiveColumns.value}, minmax(0, 1fr))`
+    }));
+    const dataSourceLabel = computed(() => dataSource.value === 'inject' ? 'TIS实时同步' : '静态兜底 lessons.json');
     const statusTagType = computed(() => {
         if (isUpdating.value) return 'info';
         return injectConnected.value ? 'success' : 'warning';
@@ -216,6 +254,7 @@
         const mi = String(d.getMinutes()).padStart(2, '0');
         return `${mm}-${dd} ${hh}:${mi}`;
     });
+    const formatTimeSummary = (course: Course) => formatCourseTimes(course.time || [], 2);
 
     const hasFullCapacity = (course: Course) => typeof course.yxzrs === 'number' && typeof course.bksrl === 'number' && (course.bksrl ?? 0) > 0;
     const formatCapacity = (course: Course) => {
@@ -248,6 +287,7 @@
     onMounted(() => {
         window.addEventListener('keydown', handleKeyDown);
         window.addEventListener('message', onMessageFromInject);
+        window.addEventListener('resize', handleResize);
         sendPingToInject();
         // Start shared auto-refresh (includes immediate run)
         startAutoRefresh();
@@ -256,7 +296,16 @@
     onUnmounted(() => {
         window.removeEventListener('keydown', handleKeyDown);
         window.removeEventListener('message', onMessageFromInject);
+        window.removeEventListener('resize', handleResize);
     });
+
+    watch(safePreferredColumns, (val) => {
+        localStorage.setItem('sustech-course-grid-columns', String(val));
+    }, { immediate: true });
+
+    const handleResize = () => {
+        viewportWidth.value = window.innerWidth;
+    };
 
     const handleKeyDown = (e: KeyboardEvent) => {
         // 如果正在输入框中，只处理 Enter
@@ -425,12 +474,13 @@
         generating.value = true;
         setTimeout(() => {
             try {
-                const results = arrangeSchedule(store.selectedCourses);
-                if (results.length === 0) {
+                const results = arrangeSchedule(store.selectedCourses, { blockedSlots: store.blockedSlots });
+                if (results.schedules.length === 0) {
+                    store.setResults(results);
                     ElMessage.error('无法生成无冲突课表，请尝试减少课程或降低部分课程优先级');
                 } else {
                     store.setResults(results);
-                    ElMessage.success(`生成了 ${results.length} 个方案`);
+                    ElMessage.success(`生成了 ${results.schedules.length} 个方案`);
                     router.push('/schedule');
                 }
             } catch (e) {
@@ -458,5 +508,40 @@
         align-items: center;
         line-height: 1;
         height: auto;
+    }
+
+    .course-grid {
+        padding-bottom: 8px;
+    }
+
+    .course-card {
+        cursor: pointer;
+    }
+
+    .course-title {
+        font-weight: 700;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .course-line {
+        font-size: 12px;
+        color: var(--el-text-color-regular);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 6px;
+        margin-top: 3px;
+    }
+
+    .course-secondary {
+        color: var(--el-text-color-secondary);
+    }
+
+    .course-ellipsis {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
     }
 </style>

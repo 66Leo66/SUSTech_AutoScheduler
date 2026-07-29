@@ -21,6 +21,26 @@ export interface Course {
 // or just a single course if no dependencies.
 export type CourseBundle = Course[];
 
+export type IncompatibilityReason = 'time_conflict' | 'blocked_time' | 'mixed';
+
+export interface IncompatibleCourseGroup {
+    name: string;
+    ids: string[];
+    reason: IncompatibilityReason;
+}
+
+export interface ScheduleAnalysis {
+    scheduledGroups: number;
+    incompatible: IncompatibleCourseGroup[];
+}
+
+export interface ArrangeScheduleResult {
+    schedules: CourseBundle[][];
+    analyses: ScheduleAnalysis[];
+    selectedGroupCount: number;
+    topConflictHints: IncompatibleCourseGroup[];
+}
+
 export interface ScheduleResult {
     [week: number]: { // 0: Odd, 1: Even ?? Or map by week parity
         [day: number]: { // 1-7
