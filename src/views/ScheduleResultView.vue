@@ -58,6 +58,7 @@
                         <span
                             v-if="store.selectedCourses.filter(c => c.active !== false).length === 0">请勾选右侧课程进行排课</span>
                         <span v-else>无可行方案，请尝试调整课程或优先级</span>
+                    </div>
                     <ScheduleGrid v-else :schedule="flatSchedule" :all-courses="allCourses" ref="gridComponent" @refresh="debouncedGenerate" />
                 </div>
 
