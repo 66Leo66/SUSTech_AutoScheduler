@@ -25,6 +25,7 @@
                         <el-date-picker v-model="semesterStartDate" type="date" placeholder="选择日期" size="small"
                             style="width: 150px;" format="YYYY-MM-DD" />
                         <el-button size="small" @click="showBlockDialog = true">屏蔽时间</el-button>
+                        <el-checkbox v-model="hidePartial" size="small" @change="resetToFirst">仅显示完整方案</el-checkbox>
                         <el-tag size="small" effect="plain">已选 {{ selectedCourseCount }} / 已排 {{ currentCourseCount }} / 不兼容 {{
                             currentIncompatible.length }}</el-tag>
                     </div>
@@ -191,14 +192,32 @@
     const semesterStartDate = ref<Date>(new Date('2026-02-23')); // 默认学期开始日期
     const showBlockDialog = ref(false);
     const syncBothWeeks = ref(true);
+    const hidePartial = ref(false);
     const blockTab = ref<'odd' | 'even'>('odd');
 
-    const currentPage = computed({
-        get: () => store.currentResultIndex + 1,
-        set: (val) => store.currentResultIndex = val - 1
+    const filteredIndices = computed(() => {
+        if (!hidePartial.value) return store.scheduleResults.map((_, i) => i);
+        return store.scheduleResults
+            .map((_, i) => i)
+            .filter(i => {
+                const analysis = store.scheduleAnalyses[i];
+                return !analysis || analysis.incompatible.length === 0;
+            });
     });
 
-    const totalPages = computed(() => store.scheduleResults.length);
+    const currentPage = computed({
+        get: () => {
+            const idx = filteredIndices.value.indexOf(store.currentResultIndex);
+            return idx >= 0 ? idx + 1 : 1;
+        },
+        set: (val) => {
+            const idx = val - 1;
+            const real = filteredIndices.value[idx];
+            if (real !== undefined) store.currentResultIndex = real;
+        }
+    });
+
+    const totalPages = computed(() => filteredIndices.value.length);
     const currentSchedule = computed(() => store.scheduleResults[store.currentResultIndex]);
     const currentAnalysis = computed(() => store.scheduleAnalyses[store.currentResultIndex]);
     const currentIncompatible = computed(() => currentAnalysis.value?.incompatible || []);
@@ -209,6 +228,10 @@
 
     // Count unique courses (one per bundle), so lectures+labs are treated as a single course
     const currentCourseCount = computed(() => currentSchedule.value ? currentSchedule.value.length : 0);
+
+    const resetToFirst = () => {
+        if (filteredIndices.value.length > 0) store.currentResultIndex = filteredIndices.value[0];
+    };
 
     const hasFullCapacity = (course: Course) => typeof course.yxzrs === 'number' && typeof course.bksrl === 'number' && (course.bksrl ?? 0) > 0;
     const formatCapacity = (course: Course) => {
@@ -317,7 +340,7 @@
                 // Optionally clear index or handle empty state ui
             } else {
                 store.setResults(results);
-                store.currentResultIndex = 0;
+                resetToFirst();
             }
         } catch (e) {
             console.error(e);

@@ -33,12 +33,14 @@
                                     <div :style="getSubTextStyle(getCourse(1, index + 1, scope.$index)!.id)">{{ getCourse(1, index +
                                         1, scope.$index)!.skyymc }}</div>
                                     <div
-                                        style="position: absolute; top: 6px; right: 6px; display: flex; align-items: center; font-size: 10px;">
+                                        style="position: absolute; top: 6px; right: 6px; display: flex; align-items: center; gap: 4px; font-size: 10px;">
+                                        <span :style="getBadgeStyle(getCourse(1, index + 1, scope.$index)!.id)">
+                                            {{ isLabId(getCourse(1, index + 1, scope.$index)!.id) ? '课内实验' : '主任务' }}
+                                        </span>
                                         <span :style="getBadgeStyle(getCourse(1, index + 1, scope.$index)!.id)">
                                             {{ compactCapacityText(getCourse(1, index + 1, scope.$index)!) }}
                                         </span>
                                     </div>
-                                </div>
                             </template>
                         </el-table-column>
                     </el-table>
@@ -76,7 +78,10 @@
                                     <div :style="getSubTextStyle(getCourse(2, index + 1, scope.$index)!.id)">{{ getCourse(2, index +
                                         1, scope.$index)!.skyymc }}</div>
                                     <div
-                                        style="position: absolute; top: 6px; right: 6px; display: flex; align-items: center; font-size: 10px;">
+                                        style="position: absolute; top: 6px; right: 6px; display: flex; align-items: center; gap: 4px; font-size: 10px;">
+                                        <span :style="getBadgeStyle(getCourse(2, index + 1, scope.$index)!.id)">
+                                            {{ isLabId(getCourse(2, index + 1, scope.$index)!.id) ? '课内实验' : '主任务' }}
+                                        </span>
                                         <span :style="getBadgeStyle(getCourse(2, index + 1, scope.$index)!.id)">
                                             {{ compactCapacityText(getCourse(2, index + 1, scope.$index)!) }}
                                         </span>
@@ -115,11 +120,10 @@
 
 <script setup lang="ts">
     import { ElMessage, ElMessageBox } from 'element-plus';
-    import type { Course, CourseBundle } from '@/types';
-    import { TIME_SLOTS, WEEK_DAYS } from '@/utils/scheduleAlgo';
+    import { findCourseAtTime } from '@/utils/courseTimeParser';
+    import { isLabId } from '@/utils/courseRelation';
     import { store } from '../store/courseStore';
     import ColorPicker from './ColorPicker.vue';
-    import { findCourseAtTime } from '@/utils/courseTimeParser';
     import { CourseColorManager } from '@/utils/courseColorManager';
     import { formatCourseTimes } from '@/utils/timeCode';
 
