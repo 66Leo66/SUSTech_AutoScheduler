@@ -1,5 +1,6 @@
 import { ref, computed } from 'vue';
-import { fetchCourses } from '@/api/course';
+import { fetchCourses, discoverAvailableSemesters } from '@/api/course';
+import type { SemesterMeta } from '@/api/course';
 import { store } from '@/store/courseStore';
 import type { Course } from '@/types';
 
@@ -9,8 +10,31 @@ const semesterLabel = ref<string>('当前学期');
 const dataSource = ref<'inject' | 'static'>('static');
 const isUpdating = ref(false);
 const loading = ref(true);
+const availableSemesters = ref<SemesterMeta[]>([]);
+const selectedSemester = ref<SemesterMeta | null>(null);
 let autoTimer: number | null = null;
 let visibilityHooked = false;
+
+const SEMESTER_STORAGE_KEY = 'sustech-selected-semester';
+
+function loadSelectedSemester (): SemesterMeta | null {
+    try {
+        const raw = localStorage.getItem(SEMESTER_STORAGE_KEY);
+        if (!raw) return null;
+        const parsed = JSON.parse(raw);
+        if (parsed && typeof parsed.label === 'string') return parsed as SemesterMeta;
+        return null;
+    } catch {
+        return null;
+    }
+}
+
+function saveSelectedSemester (sem: SemesterMeta | null) {
+    try {
+        if (sem) localStorage.setItem(SEMESTER_STORAGE_KEY, JSON.stringify(sem));
+        else localStorage.removeItem(SEMESTER_STORAGE_KEY);
+    } catch { /* ignore */ }
+}
 
 const syncSelectedCourses = (latest: Course[]) => {
     const map = new Map(latest.map(c => [c.id, c]));
@@ -26,7 +50,7 @@ const syncSelectedCourses = (latest: Course[]) => {
 const refreshCourses = async (force = false) => {
     isUpdating.value = true;
     try {
-        const meta = await fetchCourses({ forceRefresh: force });
+        const meta = await fetchCourses({ forceRefresh: force, semester: selectedSemester.value ?? undefined });
         courses.value = meta.courses;
         lastUpdatedTs.value = meta.updatedAt;
         semesterLabel.value = meta.semester.label;
@@ -37,6 +61,24 @@ const refreshCourses = async (force = false) => {
         loading.value = false;
         isUpdating.value = false;
     }
+};
+
+const discoverSemesters = async () => {
+    const semesters = await discoverAvailableSemesters();
+    availableSemesters.value = semesters;
+    if (semesters.length > 0 && !selectedSemester.value) {
+        // Default to the first (current) semester
+        selectedSemester.value = semesters[0];
+        saveSelectedSemester(semesters[0]);
+    }
+    return semesters;
+};
+
+const selectSemester = async (sem: SemesterMeta) => {
+    if (selectedSemester.value?.xnxq === sem.xnxq && selectedSemester.value?.label === sem.label) return;
+    selectedSemester.value = sem;
+    saveSelectedSemester(sem);
+    await refreshCourses(true);
 };
 
 const startAutoRefresh = (intervalMs = 30_000, onRefreshed?: (courses: Course[]) => void) => {
@@ -70,6 +112,11 @@ const startAutoRefresh = (intervalMs = 30_000, onRefreshed?: (courses: Course[])
 const loadedCourseCount = computed(() => courses.value.length);
 
 export function useCourseData () {
+    // Restore persisted semester on first call
+    if (!selectedSemester.value) {
+        const saved = loadSelectedSemester();
+        if (saved) selectedSemester.value = saved;
+    }
     return {
         courses,
         lastUpdatedTs,
@@ -78,7 +125,11 @@ export function useCourseData () {
         isUpdating,
         loading,
         loadedCourseCount,
+        availableSemesters,
+        selectedSemester,
         refreshCourses,
+        discoverSemesters,
+        selectSemester,
         syncSelectedCourses,
         startAutoRefresh
     };

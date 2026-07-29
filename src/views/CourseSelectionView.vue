@@ -28,7 +28,21 @@
                     </el-input>
                     <div
                         style="margin: 6px 0 10px; font-size: 12px; color: var(--el-text-color-secondary); display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
-                        <span>当前学期：{{ semesterLabel }}</span>
+                        <span v-if="availableSemesters.length <= 1">当前学期：{{ semesterLabel }}</span>
+                        <el-select
+                            v-else
+                            v-model="selectedSemesterKey"
+                            size="small"
+                            style="width: 200px;"
+                            @change="handleSemesterChange"
+                        >
+                            <el-option
+                                v-for="sem in availableSemesters"
+                                :key="sem.xnxq || sem.label"
+                                :label="sem.label"
+                                :value="sem.xnxq || sem.label"
+                            />
+                        </el-select>
                         <span>已加载课程：{{ loadedCourseCount }} 门</span>
                         <span>上次更新：{{ lastUpdated }}</span>
                         <span>数据来源：{{ dataSourceLabel }}</span>
@@ -207,7 +221,7 @@
     useMobileDetection();
 
     const router = useRouter();
-    const { courses: allCourses, lastUpdatedTs, semesterLabel, dataSource, isUpdating, loading, loadedCourseCount, refreshCourses, startAutoRefresh } = useCourseData();
+    const { courses: allCourses, lastUpdatedTs, semesterLabel, dataSource, isUpdating, loading, loadedCourseCount, availableSemesters, selectedSemester, refreshCourses, discoverSemesters, selectSemester, startAutoRefresh } = useCourseData();
     const searchQuery = ref('');
     const searchResults = ref<Course[]>([]);
     const exampleKeywords = ['软件工程', '操作系统', '音乐赏析', '数学', '英语'];
@@ -215,6 +229,10 @@
     const generating = ref(false);
     const dragIndex = ref<number | null>(null);
     const injectConnected = ref(false);
+    const selectedSemesterKey = computed({
+        get: () => selectedSemester.value?.xnxq ?? selectedSemester.value?.label ?? '',
+        set: (_val: string) => { /* handled by @change */ }
+    });
     const initialColumns = Number(localStorage.getItem('sustech-course-grid-columns') || 2);
     const preferredColumns = ref<number>(Number.isFinite(initialColumns) ? Math.max(1, Math.min(4, initialColumns)) : 2);
     const viewportWidth = ref(typeof window !== 'undefined' ? window.innerWidth : 1200);
@@ -291,6 +309,8 @@
         sendPingToInject();
         // Start shared auto-refresh (includes immediate run)
         startAutoRefresh();
+        // Discover available semesters (non-blocking)
+        discoverSemesters();
     });
 
     onUnmounted(() => {
@@ -428,6 +448,11 @@
     const handleReloadClick = () => {
         if (isUpdating.value) return;
         refreshCourses(true);
+    };
+
+    const handleSemesterChange = (key: string) => {
+        const sem = availableSemesters.value.find(s => (s.xnxq ?? s.label) === key);
+        if (sem) selectSemester(sem);
     };
 
     const ensureLectureLabPairs = () => {

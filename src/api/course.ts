@@ -9,12 +9,13 @@ const STATIC_FALLBACK_UPDATED_AT = Date.parse('2026-07-18T00:00:00+08:00');
 let cachedCourses: Course[] | null = null;
 let cachedUpdatedAt: number | null = null;
 let cachedCachedAt: number | null = null;
+let cachedSemesterKey: string | null = null;
 let proxyListenerReady = false;
 let injectHello = false;
 const helloWaiters: Array<(v: boolean) => void> = [];
 const pendingRequests = new Map<string, { resolve: (v: any) => void; reject: (e: Error) => void; timer: number }>();
 
-type CachedPayload = { courses: Course[]; updatedAt: number; cachedAt?: number };
+type CachedPayload = { courses: Course[]; updatedAt: number; cachedAt?: number; semesterKey?: string };
 export type SemesterMeta = {
     year?: string;
     term?: string;
@@ -233,6 +234,7 @@ function loadCache (): CachedPayload | null {
         if (!raw) return null;
         const parsed = JSON.parse(raw);
         if (!parsed || !Array.isArray(parsed.courses) || typeof parsed.updatedAt !== 'number') return null;
+        if (parsed.semesterKey) cachedSemesterKey = parsed.semesterKey;
         return parsed as CachedPayload;
     } catch (e) {
         console.warn('read cache failed', e);
@@ -276,84 +278,130 @@ function setupProxyListener () {
     });
 }
 
-async function fetchViaInject (timeoutMs = 4000): Promise<{ courses: Course[]; semester: SemesterMeta } | null> {
+// ── Proxy helpers (module scope) ──
+
+function waitForHello (deadlineMs = 100): Promise<boolean> {
+    if (injectHello) return Promise.resolve(true);
+    return new Promise(resolve => {
+        const timer = window.setTimeout(() => {
+            helloWaiters.splice(0).forEach(fn => fn(false));
+            resolve(false);
+        }, deadlineMs);
+        helloWaiters.push((ok) => {
+            window.clearTimeout(timer);
+            resolve(ok);
+        });
+        try {
+            const targetWin = window.parent && window.parent !== window ? window.parent : window;
+            targetWin.postMessage({ source: WEB_SOURCE, type: 'ping' }, '*');
+        } catch (e) {
+            console.error('hello ping failed', e);
+        }
+    });
+}
+
+function sendProxyRequest (payload: any, deadlineMs: number): Promise<any> {
+    const requestId = `proxy-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+    return new Promise((resolve, reject) => {
+        const timer = window.setTimeout(() => {
+            pendingRequests.delete(requestId);
+            reject(new Error('proxy fetch timeout'));
+        }, deadlineMs);
+        pendingRequests.set(requestId, { resolve, reject, timer });
+        try {
+            const targetWin = window.parent && window.parent !== window ? window.parent : window;
+            targetWin.postMessage({ source: WEB_SOURCE, type: 'proxyFetch', payload: { ...payload, requestId } }, '*');
+        } catch (e) {
+            window.clearTimeout(timer);
+            pendingRequests.delete(requestId);
+            reject(e as Error);
+        }
+    });
+}
+
+async function fetchTisPage (
+    candidate: { year?: string; term?: string; xnxq?: string },
+    pageNum: number,
+    pageSize: number
+) {
+    const form = new URLSearchParams({
+        p_chapylx: '',
+        ordertext_0: '',
+        p_xiaoqu: '1',
+        p_chaxunpylx: '3',
+        mxpylx: '3',
+        p_sfhltsxx: '0',
+        pageNum: String(pageNum),
+        pageSize: String(pageSize),
+    });
+    if (candidate.year) form.set('p_xn', candidate.year);
+    if (candidate.term) form.set('p_xq', candidate.term);
+    if (candidate.xnxq) form.set('p_xnxq', candidate.xnxq);
+
+    const res = await sendProxyRequest({
+        url: 'https://tis.sustech.edu.cn/Xsxktz/queryRwxxcxList',
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
+        body: form.toString(),
+        responseType: 'json'
+    }, 10000);
+
+    if (!res?.ok || !res.body) throw new Error('page fetch failed');
+    const rwList = res.body.rwList || {};
+    const list = rwList.list || rwList.data || [];
+    const total = rwList.total || list.length;
+    return { list, total };
+}
+
+// ── Semester discovery ──
+
+export async function discoverAvailableSemesters (): Promise<SemesterMeta[]> {
     setupProxyListener();
+    const helloOk = await waitForHello();
+    if (!helloOk) return [];
 
-    const waitForHello = (deadlineMs = 100): Promise<boolean> => {
-        if (injectHello) return Promise.resolve(true);
-        return new Promise(resolve => {
-            const timer = window.setTimeout(() => {
-                helloWaiters.splice(0).forEach(fn => fn(false));
-                resolve(false);
-            }, deadlineMs);
-            helloWaiters.push((ok) => {
-                window.clearTimeout(timer);
-                resolve(ok);
-            });
-            try {
-                const targetWin = window.parent && window.parent !== window ? window.parent : window;
-                targetWin.postMessage({ source: WEB_SOURCE, type: 'ping' }, '*');
-            } catch (e) {
-                console.error('hello ping failed', e);
-            }
-        });
-    };
+    const candidates = buildSemesterCandidates();
+    const results: SemesterMeta[] = [];
+    const seen = new Set<string>();
 
-    const sendProxyRequest = (payload: any, deadlineMs = timeoutMs): Promise<any> => {
-        const requestId = `proxy-${Date.now()}-${Math.random().toString(16).slice(2)}`;
-        return new Promise((resolve, reject) => {
-            const timer = window.setTimeout(() => {
-                pendingRequests.delete(requestId);
-                reject(new Error('proxy fetch timeout'));
-            }, deadlineMs);
-            pendingRequests.set(requestId, { resolve, reject, timer });
-            try {
-                const targetWin = window.parent && window.parent !== window ? window.parent : window;
-                targetWin.postMessage({ source: WEB_SOURCE, type: 'proxyFetch', payload: { ...payload, requestId } }, '*');
-            } catch (e) {
-                window.clearTimeout(timer);
-                pendingRequests.delete(requestId);
-                reject(e as Error);
-            }
-        });
-    };
+    for (const candidate of candidates) {
+        try {
+            const { list, total } = await fetchTisPage(candidate, 1, 1);
+            if (!list || !list.length || total <= 0) continue;
 
-    async function fetchPage (payload: any, pageNum: number, pageSize: number) {
-        const form = new URLSearchParams({
-            p_chapylx: '',
-            ordertext_0: '',
-            p_xiaoqu: payload.campus || '1',
-            p_chaxunpylx: '3',
-            mxpylx: '3',
-            p_sfhltsxx: '0',
-            pageNum: String(pageNum),
-            pageSize: String(pageSize),
-        });
-        if (payload.year) form.set('p_xn', payload.year);
-        if (payload.term) form.set('p_xq', payload.term);
-        if (payload.xnxq) form.set('p_xnxq', payload.xnxq);
+            const year = candidate.year;
+            const term = candidate.term;
+            const xnxq = candidate.xnxq;
+            const key = xnxq || `${year || ''}|${term || ''}`;
+            if (seen.has(key)) continue;
+            seen.add(key);
 
-        const res = await sendProxyRequest({
-            url: 'https://tis.sustech.edu.cn/Xsxktz/queryRwxxcxList',
-            method: 'POST',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
-            body: form.toString(),
-            responseType: 'json'
-        });
-
-        if (!res?.ok || !res.body) throw new Error('page fetch failed');
-        const rwList = res.body.rwList || {};
-        const list = rwList.list || rwList.data || [];
-        const total = rwList.total || list.length;
-        return { list, total };
+            const termLabel = term === '1' ? '秋季学期' : term === '2' ? '春季学期' : '学期';
+            const label = year ? `${year} ${termLabel}` : `当前${termLabel}`;
+            results.push({ year, term, xnxq, label });
+        } catch {
+            // Candidate not available — skip
+        }
     }
+
+    return results;
+}
+
+// ── Inject fetch ──
+
+async function fetchViaInject (
+    semester?: SemesterMeta
+): Promise<{ courses: Course[]; semester: SemesterMeta } | null> {
+    setupProxyListener();
 
     try {
         const helloOk = await waitForHello();
         if (!helloOk) return null;
 
         const pageSize = 500;
-        const candidates = buildSemesterCandidates();
+        const candidates = semester
+            ? [{ year: semester.year, term: semester.term, xnxq: semester.xnxq }]
+            : buildSemesterCandidates();
 
         for (const candidate of candidates) {
             let pageNum = 1;
@@ -363,7 +411,7 @@ async function fetchViaInject (timeoutMs = 4000): Promise<{ courses: Course[]; s
 
             while (true) {
                 try {
-                    const { list, total: t } = await fetchPage(candidate, pageNum, pageSize);
+                    const { list, total: t } = await fetchTisPage(candidate, pageNum, pageSize);
                     if (total === null) total = t;
                     data.push(...list);
                     if (data.length >= total! || list.length === 0) break;
@@ -379,7 +427,9 @@ async function fetchViaInject (timeoutMs = 4000): Promise<{ courses: Course[]; s
             const courses = mapCoursesFromRaw(data);
             if (!courses.length) continue;
             cachedCourses = courses;
-            return { courses, semester: deriveSemesterMeta(courses, candidate.year, candidate.term, candidate.xnxq) };
+            const meta = deriveSemesterMeta(courses, candidate.year, candidate.term, candidate.xnxq);
+            cachedSemesterKey = meta.xnxq ?? meta.label;
+            return { courses, semester: meta };
         }
         return null;
     } catch (e) {
@@ -399,12 +449,14 @@ async function fetchStatic (): Promise<{ courses: Course[]; updatedAt: number; s
     return { courses, updatedAt, semester: deriveSemesterMeta(courses) };
 }
 
-export async function fetchCourses (options?: { forceRefresh?: boolean; maxAgeMs?: number }): Promise<FetchCoursesResult> {
+export async function fetchCourses (options?: { forceRefresh?: boolean; maxAgeMs?: number; semester?: SemesterMeta }): Promise<FetchCoursesResult> {
     const maxAgeMs = options?.maxAgeMs ?? DEFAULT_MAX_AGE_MS;
     const now = Date.now();
+    const requestedKey = options?.semester ? (options.semester.xnxq ?? options.semester.label) : null;
+    const isSameSemester = !requestedKey || cachedSemesterKey === requestedKey;
     const isFresh = (ageBase?: number | null) => ageBase !== undefined && ageBase !== null && now - ageBase <= maxAgeMs;
 
-    if (!options?.forceRefresh && cachedCourses) {
+    if (!options?.forceRefresh && cachedCourses && isSameSemester) {
         const ageBase = cachedCachedAt ?? cachedUpdatedAt;
         if (isFresh(ageBase)) {
             return {
@@ -416,8 +468,7 @@ export async function fetchCourses (options?: { forceRefresh?: boolean; maxAgeMs
             };
         }
     }
-
-    if (!options?.forceRefresh) {
+    if (!options?.forceRefresh && isSameSemester) {
         const cached = loadCache();
         const cachedAgeBase = cached?.cachedAt ?? cached?.updatedAt;
         if (cached && cachedAgeBase && now - cachedAgeBase <= maxAgeMs && cached.courses.length) {
@@ -434,12 +485,12 @@ export async function fetchCourses (options?: { forceRefresh?: boolean; maxAgeMs
         }
     }
 
-    const injectData = await fetchViaInject().catch(() => null);
+    const injectData = await fetchViaInject(options?.semester).catch(() => null);
     if (injectData && injectData.courses.length) {
         cachedCourses = injectData.courses;
         cachedUpdatedAt = now;
         cachedCachedAt = now;
-        const payload: CachedPayload = { courses: injectData.courses, updatedAt: cachedUpdatedAt, cachedAt: cachedCachedAt };
+        const payload: CachedPayload = { courses: injectData.courses, updatedAt: cachedUpdatedAt, cachedAt: cachedCachedAt, semesterKey: cachedSemesterKey ?? undefined };
         saveCache(payload);
         return {
             courses: injectData.courses,
@@ -455,7 +506,8 @@ export async function fetchCourses (options?: { forceRefresh?: boolean; maxAgeMs
         cachedCourses = courses;
         cachedUpdatedAt = updatedAt;
         cachedCachedAt = now;
-        const payload: CachedPayload = { courses, updatedAt: cachedUpdatedAt, cachedAt: cachedCachedAt };
+        cachedSemesterKey = semester.xnxq ?? semester.label;
+        const payload: CachedPayload = { courses, updatedAt: cachedUpdatedAt, cachedAt: cachedCachedAt, semesterKey: cachedSemesterKey };
         saveCache(payload);
         return { courses, updatedAt: cachedUpdatedAt, fromCache: false, source: 'static', semester };
     } catch (e) {
