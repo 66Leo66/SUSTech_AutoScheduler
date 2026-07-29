@@ -230,7 +230,7 @@
     const currentCourseCount = computed(() => currentSchedule.value ? currentSchedule.value.length : 0);
 
     const resetToFirst = () => {
-        if (filteredIndices.value.length > 0) store.currentResultIndex = filteredIndices.value[0];
+        if (filteredIndices.value.length > 0) store.currentResultIndex = filteredIndices.value[0]!;
     };
 
     const hasFullCapacity = (course: Course) => typeof course.yxzrs === 'number' && typeof course.bksrl === 'number' && (course.bksrl ?? 0) > 0;

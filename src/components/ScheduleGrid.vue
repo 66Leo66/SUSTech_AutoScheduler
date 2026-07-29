@@ -121,6 +121,8 @@
 
 <script setup lang="ts">
     import { ElMessage, ElMessageBox } from 'element-plus';
+    import type { Course, CourseBundle } from '@/types';
+    import { TIME_SLOTS, WEEK_DAYS } from '@/utils/scheduleAlgo';
     import { findCourseAtTime } from '@/utils/courseTimeParser';
     import { isLabId } from '@/utils/courseRelation';
     import { store } from '../store/courseStore';
