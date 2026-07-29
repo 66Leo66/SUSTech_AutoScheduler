@@ -24,10 +24,10 @@
                                     @click="changeColor(getCourse(1, index + 1, scope.$index)!.id)"
                                     @contextmenu.prevent="showContextMenu($event, getCourse(1, index + 1, scope.$index)!, 1, index + 1, scope.$index)">
                                     <div style="font-size: 12px; font-weight: 600; line-height: 1.3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-                                        <span style="opacity: 0.85; margin-right: 3px;">{{ getCourse(1, index + 1, scope.$index)!.kcdm }}</span>{{ getCourse(1, index + 1, scope.$index)!.kcmc }}
+                                        {{ getCourse(1, index + 1, scope.$index)!.kcmc }}
                                     </div>
-                                    <div :style="{ fontSize: '11px', opacity: 0.85, lineHeight: 1.3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: getForegroundColor(getCourse(1, index + 1, scope.$index)!.id) }">
-                                        {{ getCourse(1, index + 1, scope.$index)!.dgjsmc }} · {{ getCourse(1, index + 1, scope.$index)!.skyymc }}
+                                    <div :style="{ fontSize: '10px', opacity: 0.8, lineHeight: 1.3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: getForegroundColor(getCourse(1, index + 1, scope.$index)!.id) }">
+                                        {{ getCourse(1, index + 1, scope.$index)!.kcdm }} · {{ getCourse(1, index + 1, scope.$index)!.dgjsmc }} · {{ getCourse(1, index + 1, scope.$index)!.skyymc }}
                                     </div>
                                     <div style="margin-top: auto; display: flex; gap: 4px; font-size: 10px; flex-wrap: wrap;">
                                         <span v-if="showTaskBadge(getCourse(1, index + 1, scope.$index)!)" :style="getBadgeStyle(getCourse(1, index + 1, scope.$index)!.id)">
@@ -66,10 +66,10 @@
                                     @click="changeColor(getCourse(2, index + 1, scope.$index)!.id)"
                                     @contextmenu.prevent="showContextMenu($event, getCourse(2, index + 1, scope.$index)!, 2, index + 1, scope.$index)">
                                     <div style="font-size: 12px; font-weight: 600; line-height: 1.3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-                                        <span style="opacity: 0.85; margin-right: 3px;">{{ getCourse(2, index + 1, scope.$index)!.kcdm }}</span>{{ getCourse(2, index + 1, scope.$index)!.kcmc }}
+                                        {{ getCourse(2, index + 1, scope.$index)!.kcmc }}
                                     </div>
-                                    <div :style="{ fontSize: '11px', opacity: 0.85, lineHeight: 1.3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: getForegroundColor(getCourse(2, index + 1, scope.$index)!.id) }">
-                                        {{ getCourse(2, index + 1, scope.$index)!.dgjsmc }} · {{ getCourse(2, index + 1, scope.$index)!.skyymc }}
+                                    <div :style="{ fontSize: '10px', opacity: 0.8, lineHeight: 1.3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: getForegroundColor(getCourse(2, index + 1, scope.$index)!.id) }">
+                                        {{ getCourse(2, index + 1, scope.$index)!.kcdm }} · {{ getCourse(2, index + 1, scope.$index)!.dgjsmc }} · {{ getCourse(2, index + 1, scope.$index)!.skyymc }}
                                     </div>
                                     <div style="margin-top: auto; display: flex; gap: 4px; font-size: 10px; flex-wrap: wrap;">
                                         <span v-if="showTaskBadge(getCourse(2, index + 1, scope.$index)!)" :style="getBadgeStyle(getCourse(2, index + 1, scope.$index)!.id)">
