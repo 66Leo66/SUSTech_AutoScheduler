@@ -26,7 +26,7 @@
                                     <div style="font-size: 13px; font-weight: 500; line-height: 1.3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
                                         {{ getCourse(1, index + 1, scope.$index)!.kcmc }}
                                     </div>
-                                    <div :style="{ fontSize: '11px', opacity: 0.8, lineHeight: 1.3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: getForegroundColor(getCourse(1, index + 1, scope.$index)!.id) }">
+                                    <div :style="{ fontSize: '11px', opacity: 0.8, lineHeight: 1.4, overflow: 'hidden', color: getForegroundColor(getCourse(1, index + 1, scope.$index)!.id) }">
                                         {{ getCourse(1, index + 1, scope.$index)!.kcdm }} · {{ getCourse(1, index + 1, scope.$index)!.dgjsmc }}
                                     </div>
                                     <div style="margin-top: auto; display: flex; gap: 4px; font-size: 10px; flex-wrap: wrap;">
@@ -68,7 +68,7 @@
                                     <div style="font-size: 13px; font-weight: 500; line-height: 1.3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
                                         {{ getCourse(2, index + 1, scope.$index)!.kcmc }}
                                     </div>
-                                    <div :style="{ fontSize: '11px', opacity: 0.8, lineHeight: 1.3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: getForegroundColor(getCourse(2, index + 1, scope.$index)!.id) }">
+                                    <div :style="{ fontSize: '11px', opacity: 0.8, lineHeight: 1.4, overflow: 'hidden', color: getForegroundColor(getCourse(2, index + 1, scope.$index)!.id) }">
                                         {{ getCourse(2, index + 1, scope.$index)!.kcdm }} · {{ getCourse(2, index + 1, scope.$index)!.dgjsmc }}
                                     </div>
                                     <div style="margin-top: auto; display: flex; gap: 4px; font-size: 10px; flex-wrap: wrap;">
