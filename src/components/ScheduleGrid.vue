@@ -20,21 +20,17 @@
                             min-width="120">
                             <template #default="scope">
                                 <div v-if="getCourse(1, index + 1, scope.$index)"
-                                    :style="{ ...getCourseStyle(getCourse(1, index + 1, scope.$index)!.id), position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, padding: '8px' }"
+                                    :style="{ ...getCourseStyle(getCourse(1, index + 1, scope.$index)!.id), position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, padding: '6px 8px', display: 'flex', flexDirection: 'column' }"
                                     @click="changeColor(getCourse(1, index + 1, scope.$index)!.id)"
                                     @contextmenu.prevent="showContextMenu($event, getCourse(1, index + 1, scope.$index)!, 1, index + 1, scope.$index)">
-                                    <div
-                                        style="font-size: 13px; font-weight: bold; line-height: 1.4; margin-bottom: 4px;">
-                                        {{ getCourse(1, index + 1, scope.$index)!.kcmc }}</div>
-                                    <div :style="getMetaTextStyle(getCourse(1, index + 1, scope.$index)!.id)">
-                                        {{
-                                            getCourse(1, index + 1,
-                                                scope.$index)!.dgjsmc }}</div>
-                                    <div :style="getSubTextStyle(getCourse(1, index + 1, scope.$index)!.id)">{{ getCourse(1, index +
-                                        1, scope.$index)!.skyymc }}</div>
-                                    <div
-                                        style="position: absolute; top: 6px; right: 6px; display: flex; align-items: center; gap: 4px; font-size: 10px;">
-                                        <span :style="getBadgeStyle(getCourse(1, index + 1, scope.$index)!.id)">
+                                    <div style="font-size: 12px; font-weight: 600; line-height: 1.3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                                        <span style="opacity: 0.85; margin-right: 3px;">{{ getCourse(1, index + 1, scope.$index)!.kcdm }}</span>{{ getCourse(1, index + 1, scope.$index)!.kcmc }}
+                                    </div>
+                                    <div :style="{ fontSize: '11px', opacity: 0.85, lineHeight: 1.3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: getForegroundColor(getCourse(1, index + 1, scope.$index)!.id) }">
+                                        {{ getCourse(1, index + 1, scope.$index)!.dgjsmc }} · {{ getCourse(1, index + 1, scope.$index)!.skyymc }}
+                                    </div>
+                                    <div style="margin-top: auto; display: flex; gap: 4px; font-size: 10px; flex-wrap: wrap;">
+                                        <span v-if="showTaskBadge(getCourse(1, index + 1, scope.$index)!)" :style="getBadgeStyle(getCourse(1, index + 1, scope.$index)!.id)">
                                             {{ isLabId(getCourse(1, index + 1, scope.$index)!.id) ? '课内实验' : '主任务' }}
                                         </span>
                                         <span :style="getBadgeStyle(getCourse(1, index + 1, scope.$index)!.id)">
@@ -66,21 +62,17 @@
                             min-width="120">
                             <template #default="scope">
                                 <div v-if="getCourse(2, index + 1, scope.$index)"
-                                    :style="{ ...getCourseStyle(getCourse(2, index + 1, scope.$index)!.id), position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, padding: '8px' }"
+                                    :style="{ ...getCourseStyle(getCourse(2, index + 1, scope.$index)!.id), position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, padding: '6px 8px', display: 'flex', flexDirection: 'column' }"
                                     @click="changeColor(getCourse(2, index + 1, scope.$index)!.id)"
                                     @contextmenu.prevent="showContextMenu($event, getCourse(2, index + 1, scope.$index)!, 2, index + 1, scope.$index)">
-                                    <div
-                                        style="font-size: 13px; font-weight: bold; line-height: 1.4; margin-bottom: 4px;">
-                                        {{ getCourse(2, index + 1, scope.$index)!.kcmc }}</div>
-                                    <div :style="getMetaTextStyle(getCourse(2, index + 1, scope.$index)!.id)">
-                                        {{
-                                            getCourse(2, index + 1,
-                                                scope.$index)!.dgjsmc }}</div>
-                                    <div :style="getSubTextStyle(getCourse(2, index + 1, scope.$index)!.id)">{{ getCourse(2, index +
-                                        1, scope.$index)!.skyymc }}</div>
-                                    <div
-                                        style="position: absolute; top: 6px; right: 6px; display: flex; align-items: center; gap: 4px; font-size: 10px;">
-                                        <span :style="getBadgeStyle(getCourse(2, index + 1, scope.$index)!.id)">
+                                    <div style="font-size: 12px; font-weight: 600; line-height: 1.3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                                        <span style="opacity: 0.85; margin-right: 3px;">{{ getCourse(2, index + 1, scope.$index)!.kcdm }}</span>{{ getCourse(2, index + 1, scope.$index)!.kcmc }}
+                                    </div>
+                                    <div :style="{ fontSize: '11px', opacity: 0.85, lineHeight: 1.3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: getForegroundColor(getCourse(2, index + 1, scope.$index)!.id) }">
+                                        {{ getCourse(2, index + 1, scope.$index)!.dgjsmc }} · {{ getCourse(2, index + 1, scope.$index)!.skyymc }}
+                                    </div>
+                                    <div style="margin-top: auto; display: flex; gap: 4px; font-size: 10px; flex-wrap: wrap;">
+                                        <span v-if="showTaskBadge(getCourse(2, index + 1, scope.$index)!)" :style="getBadgeStyle(getCourse(2, index + 1, scope.$index)!.id)">
                                             {{ isLabId(getCourse(2, index + 1, scope.$index)!.id) ? '课内实验' : '主任务' }}
                                         </span>
                                         <span :style="getBadgeStyle(getCourse(2, index + 1, scope.$index)!.id)">
@@ -124,7 +116,7 @@
     import type { Course, CourseBundle } from '@/types';
     import { TIME_SLOTS, WEEK_DAYS } from '@/utils/scheduleAlgo';
     import { findCourseAtTime } from '@/utils/courseTimeParser';
-    import { isLabId } from '@/utils/courseRelation';
+    import { isLabId, hasCatalogLab, getBaseCourseId } from '@/utils/courseRelation';
     import { store } from '../store/courseStore';
     import ColorPicker from './ColorPicker.vue';
     import { CourseColorManager } from '@/utils/courseColorManager';
@@ -132,15 +124,17 @@
 
     const props = defineProps<{
         schedule: CourseBundle;
+        allCourses: Course[];
     }>();
 
     const emit = defineEmits<{
         (e: 'refresh'): void
     }>();
 
-    const activeTab = ref('odd');
-    const timeSlots = TIME_SLOTS;
-    const weekDays = WEEK_DAYS;
+    function showTaskBadge (course: Course): boolean {
+        if (isLabId(course.id)) return true;
+        return hasCatalogLab(props.allCourses, getBaseCourseId(course.id));
+    }
     const menuVisible = ref(false);
     const menuStyle = reactive({ top: '0px', left: '0px' });
     const contextCourse = ref<Course | null>(null);

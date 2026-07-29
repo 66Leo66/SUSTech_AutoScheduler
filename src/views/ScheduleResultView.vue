@@ -58,8 +58,7 @@
                         <span
                             v-if="store.selectedCourses.filter(c => c.active !== false).length === 0">请勾选右侧课程进行排课</span>
                         <span v-else>无可行方案，请尝试调整课程或优先级</span>
-                    </div>
-                    <ScheduleGrid v-else :schedule="flatSchedule" ref="gridComponent" @refresh="debouncedGenerate" />
+                    <ScheduleGrid v-else :schedule="flatSchedule" :all-courses="allCourses" ref="gridComponent" @refresh="debouncedGenerate" />
                 </div>
 
                 <!-- 方案控制栏 -->
@@ -94,12 +93,17 @@
                 </div>
             </el-main>
 
-            <el-aside width="350px"
+            <el-aside width="380px"
                 style="border-left: 1px solid var(--el-border-color); display: flex; flex-direction: column;">
                 <div style="padding: 15px; border-bottom: 1px solid var(--el-border-color-lighter);">
                     <h3 style="margin: 0;">已选课程</h3>
-                    <div style="font-size: 12px; color: var(--el-text-color-secondary); margin-top: 5px;">
-                        调整开关或顺序会自动重新排课
+                    <div style="font-size: 12px; color: var(--el-text-color-secondary); margin-top: 4px; display: flex; gap: 12px;">
+                        <span>{{ uniqueCourseCount }} 门课程</span>
+                        <span>{{ totalCredits }} 学分</span>
+                        <span>{{ store.selectedCourses.length }} 个班次</span>
+                    </div>
+                    <div style="font-size: 11px; color: var(--el-text-color-secondary); margin-top: 3px;">
+                        拖拽调整优先级
                     </div>
                 </div>
                 <el-scrollbar style="flex: 1; padding: 0 10px;">
@@ -107,9 +111,10 @@
                         style="padding: 20px; text-align: center; color: var(--el-text-color-secondary);">
                         暂无课程
                     </div>
-                    <transition-group name="list">
+                    <transition-group v-else name="list">
                         <div v-for="(course, index) in store.selectedCourses" :key="course.id"
-                            style="display: flex; align-items: center; padding: 10px; border-bottom: 1px solid var(--el-border-color-lighter); cursor: move;"
+                            :style="{ borderTop: index > 0 && store.selectedCourses[index - 1]?.kcmc !== course.kcmc ? '2px solid var(--el-border-color)' : '1px solid var(--el-border-color-lighter)' }"
+                            style="display: flex; align-items: center; padding: 10px 0; cursor: move;"
                             draggable="true" @dragstart="dragStart(index)" @drop="onDrop(index)" @dragenter.prevent
                             @dragover.prevent>
                             <div style="margin-right: 10px; cursor: grab; color: var(--el-text-color-secondary);">
@@ -117,27 +122,28 @@
                                     <Rank />
                                 </el-icon>
                             </div>
-                            <div style="flex: 1; display: flex; justify-content: space-between; align-items: center;">
-                                <div style="display: flex; flex-direction: column; width: 180px;">
-                                    <span
-                                        style="font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"
-                                        :title="course.kcmc">{{ course.kcmc }}</span>
-                                    <span style="font-size: 12px; color: var(--el-text-color-secondary);">{{
-                                        course.dgjsmc }}</span>
-                                    <div
-                                        style="font-size: 12px; color: var(--el-text-color-secondary); display: flex; align-items: center; gap: 6px; margin-top: 2px;">
-                                        <span>人数：{{ formatCapacity(course) }}</span>
-                                        <el-tag v-if="hasFullCapacity(course)" size="small" effect="plain"
-                                            :type="capacityStatusType(course)">
-                                            {{ capacityStatusType(course) === 'danger' ? '超额' : '实时' }}
-                                        </el-tag>
-                                    </div>
+                            <div style="flex: 1; min-width: 0;">
+                                <div style="display: flex; align-items: baseline; gap: 6px;">
+                                    <span style="font-weight: 600; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ course.kcmc }}</span>
+                                    <span style="font-size: 11px; opacity: 0.55; flex-shrink: 0;">{{ course.kcdm }}</span>
                                 </div>
-                                <div>
-                                    <el-switch :model-value="course.active !== false" size="small"
-                                        @change="val => handleToggleActive(course.id, !!val)" />
+                                <div style="font-size: 11px; color: var(--el-text-color-secondary); margin-top: 2px;">
+                                    {{ course.rwmc }}
+                                </div>
+                                <div style="font-size: 11px; color: var(--el-text-color-secondary); margin-top: 2px; display: flex; align-items: center; gap: 4px; flex-wrap: wrap;">
+                                    <span>{{ course.dgjsmc }}</span>
+                                    <span>· {{ formatCapacity(course) }}</span>
+                                    <el-tag v-if="hasFullCapacity(course)" size="small" effect="plain"
+                                        :type="capacityStatusType(course)" style="font-size: 10px;">
+                                        {{ capacityStatusType(course) === 'danger' ? '超额' : '实时' }}
+                                    </el-tag>
+                                </div>
+                                <div v-if="(course.time || []).length" style="font-size: 11px; color: var(--el-text-color-secondary); margin-top: 1px;">
+                                    {{ formatCourseTimes(course.time || []).join('；') }}
                                 </div>
                             </div>
+                            <el-switch :model-value="course.active !== false" size="small"
+                                @change="val => handleToggleActive(course.id, !!val)" style="margin-left: 8px; flex-shrink: 0;" />
                         </div>
                     </transition-group>
                 </el-scrollbar>
@@ -183,8 +189,9 @@
     import html2canvas from 'html2canvas';
     import { arrangeSchedule, TIME_SLOTS, WEEK_DAYS } from '../utils/scheduleAlgo';
     import { exportToICS, downloadICS } from '@/utils/icsExporter';
+    import { formatCourseTimes } from '@/utils/timeCode';
 
-    const { startAutoRefresh } = useCourseData();
+    const { courses: allCourses, startAutoRefresh } = useCourseData();
 
     const router = useRouter();
     const scheduleRef = ref<HTMLElement | null>(null);
@@ -228,6 +235,24 @@
 
     // Count unique courses (one per bundle), so lectures+labs are treated as a single course
     const currentCourseCount = computed(() => currentSchedule.value ? currentSchedule.value.length : 0);
+
+    const uniqueCourseCount = computed(() => {
+        const seen = new Set<string>();
+        store.selectedCourses.forEach(c => seen.add(c.kcdm));
+        return seen.size;
+    });
+
+    const totalCredits = computed(() => {
+        const seen = new Set<string>();
+        let sum = 0;
+        store.selectedCourses.forEach(c => {
+            if (!seen.has(c.kcdm)) {
+                seen.add(c.kcdm);
+                sum += parseFloat(c.xf) || 0;
+            }
+        });
+        return sum.toFixed(1).replace(/\.0$/, '');
+    });
 
     const resetToFirst = () => {
         if (filteredIndices.value.length > 0) store.currentResultIndex = filteredIndices.value[0]!;
