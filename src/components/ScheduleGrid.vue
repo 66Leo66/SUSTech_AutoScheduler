@@ -12,7 +12,7 @@
                         }">
                         <el-table-column label="时间 / 星期" width="100" align="center" fixed>
                             <template #default="scope">
-                                <div style="white-space: pre-wrap; font-size: 12px; font-weight: bold;">{{ scope.row }}
+                                <div style="white-space: pre-wrap; font-size: 12px; font-weight: 600;">{{ scope.row }}
                                 </div>
                             </template>
                         </el-table-column>
@@ -23,7 +23,7 @@
                                     :style="{ ...getCourseStyle(getCourse(1, index + 1, scope.$index)!.id), position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, padding: '6px 8px', display: 'flex', flexDirection: 'column' }"
                                     @click="changeColor(getCourse(1, index + 1, scope.$index)!.id)"
                                     @contextmenu.prevent="showContextMenu($event, getCourse(1, index + 1, scope.$index)!, 1, index + 1, scope.$index)">
-                                    <div style="font-size: 13px; font-weight: 600; line-height: 1.3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                                    <div style="font-size: 13px; font-weight: 500; line-height: 1.3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
                                         {{ getCourse(1, index + 1, scope.$index)!.kcmc }}
                                     </div>
                                     <div :style="{ fontSize: '11px', opacity: 0.8, lineHeight: 1.3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: getForegroundColor(getCourse(1, index + 1, scope.$index)!.id) }">
@@ -54,7 +54,7 @@
                         }">
                         <el-table-column label="时间 / 星期" width="100" align="center" fixed>
                             <template #default="scope">
-                                <div style="white-space: pre-wrap; font-size: 12px; font-weight: bold;">{{ scope.row }}
+                                <div style="white-space: pre-wrap; font-size: 12px; font-weight: 600;">{{ scope.row }}
                                 </div>
                             </template>
                         </el-table-column>
@@ -65,7 +65,7 @@
                                     :style="{ ...getCourseStyle(getCourse(2, index + 1, scope.$index)!.id), position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, padding: '6px 8px', display: 'flex', flexDirection: 'column' }"
                                     @click="changeColor(getCourse(2, index + 1, scope.$index)!.id)"
                                     @contextmenu.prevent="showContextMenu($event, getCourse(2, index + 1, scope.$index)!, 2, index + 1, scope.$index)">
-                                    <div style="font-size: 13px; font-weight: 600; line-height: 1.3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                                    <div style="font-size: 13px; font-weight: 500; line-height: 1.3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
                                         {{ getCourse(2, index + 1, scope.$index)!.kcmc }}
                                     </div>
                                     <div :style="{ fontSize: '11px', opacity: 0.8, lineHeight: 1.3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: getForegroundColor(getCourse(2, index + 1, scope.$index)!.id) }">

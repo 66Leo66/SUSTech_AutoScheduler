@@ -175,7 +175,7 @@
                                 <div
                                     style="flex: 1; display: flex; justify-content: space-between; align-items: center;">
                                     <div style="display: flex; flex-direction: column;">
-                                        <span style="font-weight: 500;">{{ course.kcmc }}</span>
+                                        <span style="font-weight: 400;">{{ course.kcmc }}</span>
                                         <span style="font-size: 12px; color: var(--el-text-color-secondary);">{{
                                             course.dgjsmc
                                             }}</span>
@@ -544,7 +544,7 @@
     }
 
     .course-title {
-        font-weight: 700;
+        font-weight: 600;
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;

@@ -66,7 +66,7 @@
                 <div style="margin-top: 15px; display: flex; justify-content: center; align-items: center;">
                     <el-space :size="15">
                         <el-button circle :icon="ArrowLeft" @click="prevPage" :disabled="currentPage <= 1" />
-                        <span style="font-weight: bold; font-size: 14px;">方案 {{ currentPage }} / {{ totalPages }} (课程数:
+                        <span style="font-weight: 600; font-size: 14px;">方案 {{ currentPage }} / {{ totalPages }} (课程数:
                             {{
                                 currentCourseCount
                             }}/{{ selectedCourseCount }})</span>
@@ -125,7 +125,7 @@
                             </div>
                             <div style="flex: 1; min-width: 0;">
                                 <div style="display: flex; align-items: baseline; gap: 6px;">
-                                    <span style="font-weight: 600; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ course.kcmc }}</span>
+                                    <span style="font-weight: 500; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ course.kcmc }}</span>
                                     <span style="font-size: 11px; opacity: 0.55; flex-shrink: 0;">{{ course.kcdm }}</span>
                                 </div>
                                 <div style="font-size: 11px; color: var(--el-text-color-secondary); margin-top: 2px;">
@@ -527,7 +527,7 @@
     .mini-grid-header {
         background: var(--el-fill-color-light);
         color: var(--el-text-color-secondary);
-        font-weight: 600;
+        font-weight: 500;
     }
 
     .mini-grid-btn {
