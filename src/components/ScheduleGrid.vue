@@ -41,6 +41,7 @@
                                             {{ compactCapacityText(getCourse(1, index + 1, scope.$index)!) }}
                                         </span>
                                     </div>
+                                </div>
                             </template>
                         </el-table-column>
                     </el-table>
