@@ -68,8 +68,9 @@ const discoverSemesters = async () => {
     availableSemesters.value = semesters;
     if (semesters.length > 0 && !selectedSemester.value) {
         // Default to the first (current) semester
-        selectedSemester.value = semesters[0];
-        saveSelectedSemester(semesters[0]);
+        const first = semesters[0]!;
+        selectedSemester.value = first;
+        saveSelectedSemester(first);
     }
     return semesters;
 };
