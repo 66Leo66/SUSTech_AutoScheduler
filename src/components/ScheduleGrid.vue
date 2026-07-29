@@ -115,6 +115,7 @@
     import { ElMessage, ElMessageBox } from 'element-plus';
     import type { Course, CourseBundle } from '@/types';
     import { findCourseAtTime } from '@/utils/courseTimeParser';
+    import { TIME_SLOTS, WEEK_DAYS } from '@/utils/scheduleAlgo';
     import { isLabId, hasCatalogLab, getBaseCourseId } from '@/utils/courseRelation';
     import { store } from '../store/courseStore';
     import ColorPicker from './ColorPicker.vue';
