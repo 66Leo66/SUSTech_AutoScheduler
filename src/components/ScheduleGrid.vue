@@ -8,14 +8,7 @@
                             if (columnIndex === 0) return {};
                             const course = getCourse(1, columnIndex, rowIndex);
                             if (!course) return {};
-                            const isHighlighted = colorManager.isHighlighted(course.id);
-                            return {
-                                backgroundColor: getCourseColor(course.id),
-                                padding: '0',
-                                position: 'relative',
-                                border: isHighlighted ? '3px solid #FFD700' : undefined,
-                                boxSizing: 'border-box'
-                            };
+                            return getCellStyle(course.id);
                         }">
                         <el-table-column label="时间 / 星期" width="100" align="center" fixed>
                             <template #default="scope">
@@ -27,28 +20,21 @@
                             min-width="120">
                             <template #default="scope">
                                 <div v-if="getCourse(1, index + 1, scope.$index)"
-                                    :style="{ ...getCourseStyle(), position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, padding: '8px' }"
+                                    :style="{ ...getCourseStyle(getCourse(1, index + 1, scope.$index)!.id), position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, padding: '8px' }"
                                     @click="changeColor(getCourse(1, index + 1, scope.$index)!.id)"
                                     @contextmenu.prevent="showContextMenu($event, getCourse(1, index + 1, scope.$index)!, 1, index + 1, scope.$index)">
                                     <div
                                         style="font-size: 13px; font-weight: bold; line-height: 1.4; margin-bottom: 4px;">
                                         {{ getCourse(1, index + 1, scope.$index)!.kcmc }}</div>
-                                    <div
-                                        style="font-size: 12px; opacity: 0.95; color: #fff; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                                    <div :style="getMetaTextStyle(getCourse(1, index + 1, scope.$index)!.id)">
                                         {{
                                             getCourse(1, index + 1,
                                                 scope.$index)!.dgjsmc }}</div>
-                                    <div style="font-size: 12px; opacity: 0.9; margin-top: 2px;">{{ getCourse(1, index +
+                                    <div :style="getSubTextStyle(getCourse(1, index + 1, scope.$index)!.id)">{{ getCourse(1, index +
                                         1, scope.$index)!.skyymc }}</div>
                                     <div
                                         style="position: absolute; top: 6px; right: 6px; display: flex; align-items: center; font-size: 10px;">
-                                        <span :style="{
-                                            padding: '2px 6px',
-                                            borderRadius: '10px',
-                                            background: 'rgba(0, 0, 0, 0.35)',
-                                            color: '#fff',
-                                            lineHeight: 1.2,
-                                        }">
+                                        <span :style="getBadgeStyle(getCourse(1, index + 1, scope.$index)!.id)">
                                             {{ compactCapacityText(getCourse(1, index + 1, scope.$index)!) }}
                                         </span>
                                     </div>
@@ -65,14 +51,7 @@
                             if (columnIndex === 0) return {};
                             const course = getCourse(2, columnIndex, rowIndex);
                             if (!course) return {};
-                            const isHighlighted = colorManager.isHighlighted(course.id);
-                            return {
-                                backgroundColor: getCourseColor(course.id),
-                                padding: '0',
-                                position: 'relative',
-                                border: isHighlighted ? '3px solid #FFD700' : undefined,
-                                boxSizing: 'border-box'
-                            };
+                            return getCellStyle(course.id);
                         }">
                         <el-table-column label="时间 / 星期" width="100" align="center" fixed>
                             <template #default="scope">
@@ -84,28 +63,21 @@
                             min-width="120">
                             <template #default="scope">
                                 <div v-if="getCourse(2, index + 1, scope.$index)"
-                                    :style="{ ...getCourseStyle(), position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, padding: '8px' }"
+                                    :style="{ ...getCourseStyle(getCourse(2, index + 1, scope.$index)!.id), position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, padding: '8px' }"
                                     @click="changeColor(getCourse(2, index + 1, scope.$index)!.id)"
                                     @contextmenu.prevent="showContextMenu($event, getCourse(2, index + 1, scope.$index)!, 2, index + 1, scope.$index)">
                                     <div
                                         style="font-size: 13px; font-weight: bold; line-height: 1.4; margin-bottom: 4px;">
                                         {{ getCourse(2, index + 1, scope.$index)!.kcmc }}</div>
-                                    <div
-                                        style="font-size: 12px; opacity: 0.95; color: #fff; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                                    <div :style="getMetaTextStyle(getCourse(2, index + 1, scope.$index)!.id)">
                                         {{
                                             getCourse(2, index + 1,
                                                 scope.$index)!.dgjsmc }}</div>
-                                    <div style="font-size: 12px; opacity: 0.9; margin-top: 2px;">{{ getCourse(2, index +
+                                    <div :style="getSubTextStyle(getCourse(2, index + 1, scope.$index)!.id)">{{ getCourse(2, index +
                                         1, scope.$index)!.skyymc }}</div>
                                     <div
                                         style="position: absolute; top: 6px; right: 6px; display: flex; align-items: center; font-size: 10px;">
-                                        <span :style="{
-                                            padding: '2px 6px',
-                                            borderRadius: '10px',
-                                            background: 'rgba(0, 0, 0, 0.35)',
-                                            color: '#fff',
-                                            lineHeight: 1.2,
-                                        }">
+                                        <span :style="getBadgeStyle(getCourse(2, index + 1, scope.$index)!.id)">
                                             {{ compactCapacityText(getCourse(2, index + 1, scope.$index)!) }}
                                         </span>
                                     </div>
@@ -149,6 +121,7 @@
     import ColorPicker from './ColorPicker.vue';
     import { findCourseAtTime } from '@/utils/courseTimeParser';
     import { CourseColorManager } from '@/utils/courseColorManager';
+    import { formatCourseTimes } from '@/utils/timeCode';
 
     const props = defineProps<{
         schedule: CourseBundle;
@@ -177,26 +150,79 @@
 
     function getCourseColor (id: string) {
         const color = colorManager.getColor(id);
-        // 将十六进制颜色转换为 rgba 格式，添加 0.333 的透明度
         const hex = color.replace('#', '');
         const r = parseInt(hex.substring(0, 2), 16);
         const g = parseInt(hex.substring(2, 4), 16);
         const b = parseInt(hex.substring(4, 6), 16);
-        return `rgba(${r}, ${g}, ${b}, 0.333)`;
+        const isDark = document.documentElement.classList.contains('dark');
+        const alpha = isDark ? 0.52 : 0.48;
+        return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+    }
+
+    function getForegroundColor (id: string) {
+        const color = colorManager.getColor(id).replace('#', '');
+        const r = parseInt(color.substring(0, 2), 16);
+        const g = parseInt(color.substring(2, 4), 16);
+        const b = parseInt(color.substring(4, 6), 16);
+        const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+        return luminance > 0.62 ? '#18222e' : '#ffffff';
+    }
+
+    function getCellStyle (id: string) {
+        const isHighlighted = colorManager.isHighlighted(id);
+        return {
+            backgroundColor: getCourseColor(id),
+            padding: '0',
+            position: 'relative',
+            border: isHighlighted ? '3px solid #FFD700' : undefined,
+            boxSizing: 'border-box'
+        };
     }
 
     function changeColor (id: string) {
         colorManager.assignRandomColor(id);
     }
 
-    function getCourseStyle () {
+    function getCourseStyle (id: string) {
         return {
-            color: '#fff',
+            color: getForegroundColor(id),
             height: '100%',
             cursor: 'pointer',
             display: 'flex',
             flexDirection: 'column' as const,
             justifyContent: 'center'
+        };
+    }
+
+    function getMetaTextStyle (id: string) {
+        return {
+            fontSize: '12px',
+            opacity: 0.95,
+            color: getForegroundColor(id),
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap'
+        };
+    }
+
+    function getSubTextStyle (id: string) {
+        return {
+            fontSize: '12px',
+            opacity: 0.88,
+            color: getForegroundColor(id),
+            marginTop: '2px'
+        };
+    }
+
+    function getBadgeStyle (id: string) {
+        const textColor = getForegroundColor(id);
+        const lightText = textColor === '#ffffff';
+        return {
+            padding: '2px 6px',
+            borderRadius: '10px',
+            background: lightText ? 'rgba(0, 0, 0, 0.35)' : 'rgba(255, 255, 255, 0.6)',
+            color: textColor,
+            lineHeight: 1.2
         };
     }
 
@@ -283,7 +309,8 @@
                 `<p><strong>${c.kcmc}</strong> (${c.kcdm})</p>
                  <p>Teacher: ${c.dgjsmc}</p>
                  <p>Dept: ${c.kkyxmc}</p>
-                 <p>Time codes: ${(c.time || []).join(', ')}</p>`,
+                <p>Time: ${(formatCourseTimes(c.time || []).join('；') || '-')}</p>
+                <p>Time codes: ${(c.time || []).join(', ')}</p>`,
                 'Course Details',
                 { dangerouslyUseHTMLString: true }
             );

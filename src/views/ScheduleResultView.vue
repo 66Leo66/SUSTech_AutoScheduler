@@ -20,10 +20,13 @@
             <el-main style="overflow: hidden; padding: 20px; display: flex; flex-direction: column;">
                 <!-- 工具栏 -->
                 <div style="margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center;">
-                    <div>
+                    <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
                         <el-text style="margin-right: 10px;">学期开始日期:</el-text>
                         <el-date-picker v-model="semesterStartDate" type="date" placeholder="选择日期" size="small"
                             style="width: 150px;" format="YYYY-MM-DD" />
+                        <el-button size="small" @click="showBlockDialog = true">屏蔽时间</el-button>
+                        <el-tag size="small" effect="plain">已选 {{ selectedCourseCount }} / 已排 {{ currentCourseCount }} / 不兼容 {{
+                            currentIncompatible.length }}</el-tag>
                     </div>
                     <el-button-group>
                         <el-button @click="exportImage">
@@ -65,9 +68,28 @@
                         <span style="font-weight: bold; font-size: 14px;">方案 {{ currentPage }} / {{ totalPages }} (课程数:
                             {{
                                 currentCourseCount
-                            }})</span>
+                            }}/{{ selectedCourseCount }})</span>
                         <el-button circle :icon="ArrowRight" @click="nextPage" :disabled="currentPage >= totalPages" />
                     </el-space>
+                </div>
+
+                <div style="margin-top: 10px;">
+                    <el-alert v-if="!currentSchedule && store.topConflictHints.length" type="warning" show-icon :closable="false"
+                        title="暂无完全可行方案，以下课程最可能造成冲突" />
+                    <div v-if="!currentSchedule && store.topConflictHints.length"
+                        style="margin-top: 6px; display: flex; gap: 6px; flex-wrap: wrap;">
+                        <el-tag v-for="item in store.topConflictHints" :key="item.name" type="warning" effect="plain">
+                            {{ item.name }}（{{ reasonText(item.reason) }}）
+                        </el-tag>
+                    </div>
+                    <el-alert v-else-if="currentIncompatible.length" type="info" show-icon :closable="false"
+                        :title="`当前方案未兼容 ${currentIncompatible.length} 门课程`" />
+                    <div v-if="currentIncompatible.length"
+                        style="margin-top: 6px; display: flex; gap: 6px; flex-wrap: wrap;">
+                        <el-tag v-for="item in currentIncompatible" :key="item.name" effect="plain">
+                            {{ item.name }}（{{ reasonText(item.reason) }}）
+                        </el-tag>
+                    </div>
                 </div>
             </el-main>
 
@@ -121,12 +143,36 @@
             </el-aside>
         </el-container>
     </el-container>
+
+    <el-dialog v-model="showBlockDialog" title="屏蔽时间" width="560px">
+        <div style="display: flex; justify-content: space-between; margin-bottom: 10px; align-items: center;">
+            <el-tabs v-model="blockTab" style="flex: 1;">
+                <el-tab-pane label="单周" name="odd" />
+                <el-tab-pane label="双周" name="even" />
+            </el-tabs>
+            <el-space>
+                <el-switch v-model="syncBothWeeks" active-text="单双周同步" />
+                <el-button size="small" @click="clearBlockedSlots">清空</el-button>
+            </el-space>
+        </div>
+        <div class="mini-grid">
+            <div class="mini-grid-cell mini-grid-header"></div>
+            <div class="mini-grid-cell mini-grid-header" v-for="(day, i) in WEEK_DAYS" :key="`d-${i}`">{{ day }}</div>
+            <template v-for="(slot, rowIndex) in TIME_SLOTS" :key="`r-${rowIndex}`">
+                <div class="mini-grid-cell mini-grid-header">{{ slot.split(' ')[0] }}</div>
+                <button v-for="day in 7" :key="`c-${rowIndex}-${day}`" class="mini-grid-cell mini-grid-btn"
+                    :class="{ active: isBlockedInUI(day, rowIndex) }" @click="toggleBlocked(day, rowIndex)">
+                    {{ isBlockedInUI(day, rowIndex) ? '已屏蔽' : '' }}
+                </button>
+            </template>
+        </div>
+    </el-dialog>
 </template>
 
 <script setup lang="ts">
     import { ElMessage } from 'element-plus';
     import { ArrowLeft, ArrowRight, Rank, QuestionFilled, Download, Document, Calendar } from '@element-plus/icons-vue';
-    import type { Course } from '@/types';
+    import type { Course, IncompatibilityReason } from '@/types';
     import { useMobileDetection } from '../composables/useMobileDetection';
     import { useCourseData } from '../composables/useCourseData';
 
@@ -134,7 +180,7 @@
     import { store } from '../store/courseStore';
     import ScheduleGrid from '../components/ScheduleGrid.vue';
     import html2canvas from 'html2canvas';
-    import { arrangeSchedule } from '../utils/scheduleAlgo';
+    import { arrangeSchedule, TIME_SLOTS, WEEK_DAYS } from '../utils/scheduleAlgo';
     import { exportToICS, downloadICS } from '@/utils/icsExporter';
 
     const { startAutoRefresh } = useCourseData();
@@ -143,6 +189,9 @@
     const scheduleRef = ref<HTMLElement | null>(null);
     const dragIndex = ref<number | null>(null);
     const semesterStartDate = ref<Date>(new Date('2026-02-23')); // 默认学期开始日期
+    const showBlockDialog = ref(false);
+    const syncBothWeeks = ref(true);
+    const blockTab = ref<'odd' | 'even'>('odd');
 
     const currentPage = computed({
         get: () => store.currentResultIndex + 1,
@@ -151,6 +200,9 @@
 
     const totalPages = computed(() => store.scheduleResults.length);
     const currentSchedule = computed(() => store.scheduleResults[store.currentResultIndex]);
+    const currentAnalysis = computed(() => store.scheduleAnalyses[store.currentResultIndex]);
+    const currentIncompatible = computed(() => currentAnalysis.value?.incompatible || []);
+    const selectedCourseCount = computed(() => store.selectedGroupCount || store.selectedCourses.filter(c => c.active !== false).length);
 
     // Flatten the bundle list to a single course list for the grid
     const flatSchedule = computed(() => currentSchedule.value ? currentSchedule.value.flat() : []);
@@ -259,9 +311,9 @@
 
     const triggerGenerate = () => {
         try {
-            const results = arrangeSchedule(store.selectedCourses);
-            if (results.length === 0) {
-                store.setResults([]);
+            const results = arrangeSchedule(store.selectedCourses, { blockedSlots: store.blockedSlots });
+            if (results.schedules.length === 0) {
+                store.setResults(results);
                 // Optionally clear index or handle empty state ui
             } else {
                 store.setResults(results);
@@ -352,6 +404,36 @@
             ElMessage.error('导出失败');
         }
     };
+
+    const reasonText = (reason: IncompatibilityReason) => {
+        if (reason === 'blocked_time') return '受屏蔽时段影响';
+        if (reason === 'mixed') return '时间冲突+屏蔽';
+        return '时间冲突';
+    };
+
+    const activeWeek = computed<1 | 2>(() => blockTab.value === 'odd' ? 1 : 2);
+    const isBlockedInUI = (day: number, slotIndex: number) => store.isBlockedSlot(activeWeek.value, day, slotIndex);
+    const toggleBlocked = (day: number, slotIndex: number) => {
+        const toggle = (week: 1 | 2) => store.toggleBlockedSlot(week, day, slotIndex);
+        if (syncBothWeeks.value) {
+            const bothBlocked = store.isBlockedSlot(1, day, slotIndex) && store.isBlockedSlot(2, day, slotIndex);
+            if (bothBlocked) {
+                if (store.isBlockedSlot(1, day, slotIndex)) toggle(1);
+                if (store.isBlockedSlot(2, day, slotIndex)) toggle(2);
+            } else {
+                if (!store.isBlockedSlot(1, day, slotIndex)) toggle(1);
+                if (!store.isBlockedSlot(2, day, slotIndex)) toggle(2);
+            }
+        } else {
+            toggle(activeWeek.value);
+        }
+        debouncedGenerate();
+    };
+
+    const clearBlockedSlots = () => {
+        store.clearBlockedSlots();
+        debouncedGenerate();
+    };
 </script>
 
 <style scoped>
@@ -373,5 +455,41 @@
 
     .schedule-scroll::-webkit-scrollbar-thumb:hover {
         background: rgba(0, 0, 0, 0.35);
+    }
+
+    .mini-grid {
+        display: grid;
+        grid-template-columns: 100px repeat(7, minmax(0, 1fr));
+        gap: 4px;
+    }
+
+    .mini-grid-cell {
+        min-height: 34px;
+        border: 1px solid var(--el-border-color-lighter);
+        border-radius: 4px;
+        font-size: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 4px;
+        text-align: center;
+    }
+
+    .mini-grid-header {
+        background: var(--el-fill-color-light);
+        color: var(--el-text-color-secondary);
+        font-weight: 600;
+    }
+
+    .mini-grid-btn {
+        cursor: pointer;
+        background: var(--el-bg-color);
+        color: var(--el-text-color-secondary);
+    }
+
+    .mini-grid-btn.active {
+        background: var(--el-color-danger-light-8);
+        border-color: var(--el-color-danger-light-5);
+        color: var(--el-color-danger);
     }
 </style>

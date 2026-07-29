@@ -15,7 +15,19 @@ const helloWaiters: Array<(v: boolean) => void> = [];
 const pendingRequests = new Map<string, { resolve: (v: any) => void; reject: (e: Error) => void; timer: number }>();
 
 type CachedPayload = { courses: Course[]; updatedAt: number; cachedAt?: number };
-export type FetchCoursesResult = { courses: Course[]; updatedAt: number; fromCache: boolean };
+export type SemesterMeta = {
+    year?: string;
+    term?: string;
+    xnxq?: string;
+    label: string;
+};
+export type FetchCoursesResult = {
+    courses: Course[];
+    updatedAt: number;
+    fromCache: boolean;
+    source: 'inject' | 'static';
+    semester: SemesterMeta;
+};
 
 function periodToHex (p: number): string {
     return p < 10 ? String(p) : String.fromCharCode('A'.charCodeAt(0) + p - 10);
@@ -170,6 +182,51 @@ function mapCourses (raw: any[]): Course[] {
     }));
 }
 
+function deriveSemesterMeta (courses: Course[], fallbackYear?: string, fallbackTerm?: string, fallbackXnxq?: string): SemesterMeta {
+    const id = courses.find(c => typeof c.id === 'string' && c.id.includes('-'))?.id || '';
+    const m = /^(\d{4})-(\d{4})-(\d)/.exec(id);
+    const year = m?.[1] && m?.[2] ? `${m[1]}-${m[2]}` : (fallbackYear || undefined);
+    const term = m?.[3] || fallbackTerm || undefined;
+    const xnxq = m?.[1] && m?.[2] && m?.[3] ? `${m[1]}-${m[2]}${m[3]}` : (fallbackXnxq || undefined);
+    const termLabel = term === '1' ? '秋季学期' : term === '2' ? '春季学期' : '学期';
+    const label = year ? `${year} ${termLabel}` : `当前${termLabel}`;
+    return { year, term, xnxq, label };
+}
+
+function buildSemesterCandidates (): Array<{ year?: string; term?: string; xnxq?: string }> {
+    const now = new Date();
+    const y = now.getFullYear();
+    const month = now.getMonth() + 1;
+    const fallFirst = month >= 8;
+    const primaryYearStart = fallFirst ? y : y - 1;
+    const primaryTerm = fallFirst ? '1' : '2';
+    const candidates: Array<{ year?: string; term?: string; xnxq?: string }> = [{}, { year: `${primaryYearStart}-${primaryYearStart + 1}`, term: primaryTerm, xnxq: `${primaryYearStart}-${primaryYearStart + 1}${primaryTerm}` }];
+    const pairs = [
+        { s: primaryYearStart, t: primaryTerm },
+        { s: primaryYearStart, t: primaryTerm === '1' ? '2' : '1' },
+        { s: primaryYearStart - 1, t: '1' },
+        { s: primaryYearStart - 1, t: '2' },
+        { s: primaryYearStart + 1, t: '1' },
+        { s: primaryYearStart + 1, t: '2' }
+    ];
+    for (const p of pairs) {
+        const year = `${p.s}-${p.s + 1}`;
+        candidates.push({ year, term: p.t, xnxq: `${year}${p.t}` });
+    }
+
+    const seen = new Set<string>();
+    return candidates.filter(c => {
+        const key = `${c.year || ''}|${c.term || ''}|${c.xnxq || ''}`;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+    });
+}
+
+function inferSource (courses: Course[]): 'inject' | 'static' {
+    return courses.some(c => typeof c.yxzrs === 'number' || typeof c.bksrl === 'number') ? 'inject' : 'static';
+}
+
 function loadCache (): CachedPayload | null {
     try {
         const raw = localStorage.getItem(CACHE_KEY);
@@ -219,7 +276,7 @@ function setupProxyListener () {
     });
 }
 
-async function fetchViaInject (timeoutMs = 4000): Promise<Course[] | null> {
+async function fetchViaInject (timeoutMs = 4000): Promise<{ courses: Course[]; semester: SemesterMeta } | null> {
     setupProxyListener();
 
     const waitForHello = (deadlineMs = 100): Promise<boolean> => {
@@ -265,9 +322,6 @@ async function fetchViaInject (timeoutMs = 4000): Promise<Course[] | null> {
         const form = new URLSearchParams({
             p_chapylx: '',
             ordertext_0: '',
-            p_xn: payload.year || '2026-2027',
-            p_xq: payload.term || '1',
-            p_xnxq: payload.xnxq || '2026-20271',
             p_xiaoqu: payload.campus || '1',
             p_chaxunpylx: '3',
             mxpylx: '3',
@@ -275,6 +329,9 @@ async function fetchViaInject (timeoutMs = 4000): Promise<Course[] | null> {
             pageNum: String(pageNum),
             pageSize: String(pageSize),
         });
+        if (payload.year) form.set('p_xn', payload.year);
+        if (payload.term) form.set('p_xq', payload.term);
+        if (payload.xnxq) form.set('p_xnxq', payload.xnxq);
 
         const res = await sendProxyRequest({
             url: 'https://tis.sustech.edu.cn/Xsxktz/queryRwxxcxList',
@@ -296,35 +353,50 @@ async function fetchViaInject (timeoutMs = 4000): Promise<Course[] | null> {
         if (!helloOk) return null;
 
         const pageSize = 500;
-        let pageNum = 1;
-        const data: any[] = [];
-        let total: number | null = null;
+        const candidates = buildSemesterCandidates();
 
-        while (true) {
-            const { list, total: t } = await fetchPage({}, pageNum, pageSize);
-            if (total === null) total = t;
-            data.push(...list);
-            if (data.length >= total! || list.length === 0) break;
-            pageNum += 1;
+        for (const candidate of candidates) {
+            let pageNum = 1;
+            const data: any[] = [];
+            let total: number | null = null;
+            let failed = false;
+
+            while (true) {
+                try {
+                    const { list, total: t } = await fetchPage(candidate, pageNum, pageSize);
+                    if (total === null) total = t;
+                    data.push(...list);
+                    if (data.length >= total! || list.length === 0) break;
+                    pageNum += 1;
+                } catch {
+                    failed = true;
+                    break;
+                }
+            }
+
+            if (failed || data.length === 0) continue;
+
+            const courses = mapCoursesFromRaw(data);
+            if (!courses.length) continue;
+            cachedCourses = courses;
+            return { courses, semester: deriveSemesterMeta(courses, candidate.year, candidate.term, candidate.xnxq) };
         }
-
-        const courses = mapCoursesFromRaw(data);
-        cachedCourses = courses;
-        return courses;
+        return null;
     } catch (e) {
         console.error('inject fetch failed', e);
         return null;
     }
 }
 
-async function fetchStatic (): Promise<{ courses: Course[]; updatedAt: number }> {
+async function fetchStatic (): Promise<{ courses: Course[]; updatedAt: number; semester: SemesterMeta }> {
     const response = await fetch('/lessons.json');
     if (!response.ok) {
         throw new Error('Failed to load lessons');
     }
     const data = await response.json();
     const updatedAt = Number.isFinite(STATIC_FALLBACK_UPDATED_AT) ? STATIC_FALLBACK_UPDATED_AT : Date.now();
-    return { courses: mapCourses(data), updatedAt };
+    const courses = mapCourses(data);
+    return { courses, updatedAt, semester: deriveSemesterMeta(courses) };
 }
 
 export async function fetchCourses (options?: { forceRefresh?: boolean; maxAgeMs?: number }): Promise<FetchCoursesResult> {
@@ -335,7 +407,13 @@ export async function fetchCourses (options?: { forceRefresh?: boolean; maxAgeMs
     if (!options?.forceRefresh && cachedCourses) {
         const ageBase = cachedCachedAt ?? cachedUpdatedAt;
         if (isFresh(ageBase)) {
-            return { courses: cachedCourses, updatedAt: cachedUpdatedAt ?? ageBase ?? now, fromCache: true };
+            return {
+                courses: cachedCourses,
+                updatedAt: cachedUpdatedAt ?? ageBase ?? now,
+                fromCache: true,
+                source: inferSource(cachedCourses),
+                semester: deriveSemesterMeta(cachedCourses)
+            };
         }
     }
 
@@ -346,32 +424,50 @@ export async function fetchCourses (options?: { forceRefresh?: boolean; maxAgeMs
             cachedCourses = cached.courses;
             cachedUpdatedAt = cached.updatedAt;
             cachedCachedAt = cached.cachedAt ?? cached.updatedAt;
-            return { courses: cached.courses, updatedAt: cached.updatedAt, fromCache: true };
+            return {
+                courses: cached.courses,
+                updatedAt: cached.updatedAt,
+                fromCache: true,
+                source: inferSource(cached.courses),
+                semester: deriveSemesterMeta(cached.courses)
+            };
         }
     }
 
-    const injectCourses = await fetchViaInject().catch(() => null);
-    if (injectCourses && injectCourses.length) {
-        cachedCourses = injectCourses;
+    const injectData = await fetchViaInject().catch(() => null);
+    if (injectData && injectData.courses.length) {
+        cachedCourses = injectData.courses;
         cachedUpdatedAt = now;
         cachedCachedAt = now;
-        const payload: CachedPayload = { courses: injectCourses, updatedAt: cachedUpdatedAt, cachedAt: cachedCachedAt };
+        const payload: CachedPayload = { courses: injectData.courses, updatedAt: cachedUpdatedAt, cachedAt: cachedCachedAt };
         saveCache(payload);
-        return { courses: injectCourses, updatedAt: cachedUpdatedAt, fromCache: false };
+        return {
+            courses: injectData.courses,
+            updatedAt: cachedUpdatedAt,
+            fromCache: false,
+            source: 'inject',
+            semester: injectData.semester
+        };
     }
 
     try {
-        const { courses, updatedAt } = await fetchStatic();
+        const { courses, updatedAt, semester } = await fetchStatic();
         cachedCourses = courses;
         cachedUpdatedAt = updatedAt;
         cachedCachedAt = now;
         const payload: CachedPayload = { courses, updatedAt: cachedUpdatedAt, cachedAt: cachedCachedAt };
         saveCache(payload);
-        return { courses, updatedAt: cachedUpdatedAt, fromCache: false };
+        return { courses, updatedAt: cachedUpdatedAt, fromCache: false, source: 'static', semester };
     } catch (e) {
         console.error(e);
         cachedUpdatedAt = now;
         cachedCachedAt = now;
-        return { courses: [], updatedAt: cachedUpdatedAt, fromCache: false };
+        return {
+            courses: [],
+            updatedAt: cachedUpdatedAt,
+            fromCache: false,
+            source: 'static',
+            semester: { label: '当前学期' }
+        };
     }
 }
