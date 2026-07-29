@@ -4,7 +4,7 @@
             <el-tab-pane label="单周" name="odd" style="height: 100%;">
                 <div style="height: 100%; overflow: auto;">
                     <el-table :data="timeSlots" border style="width: 100%; height: 100%; user-select: none;"
-                        :row-style="{ height: '100px' }" :cell-style="({ rowIndex, columnIndex }) => {
+                        :row-style="{ height: '92px' }" :cell-style="({ rowIndex, columnIndex }) => {
                             if (columnIndex === 0) return {};
                             const course = getCourse(1, columnIndex, rowIndex);
                             if (!course) return {};
@@ -23,10 +23,10 @@
                                     :style="{ ...getCourseStyle(getCourse(1, index + 1, scope.$index)!.id), position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, padding: '6px 8px', display: 'flex', flexDirection: 'column' }"
                                     @click="changeColor(getCourse(1, index + 1, scope.$index)!.id)"
                                     @contextmenu.prevent="showContextMenu($event, getCourse(1, index + 1, scope.$index)!, 1, index + 1, scope.$index)">
-                                    <div style="font-size: 12px; font-weight: 600; line-height: 1.3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                                    <div style="font-size: 13px; font-weight: 600; line-height: 1.3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
                                         {{ getCourse(1, index + 1, scope.$index)!.kcmc }}
                                     </div>
-                                    <div :style="{ fontSize: '10px', opacity: 0.8, lineHeight: 1.3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: getForegroundColor(getCourse(1, index + 1, scope.$index)!.id) }">
+                                    <div :style="{ fontSize: '11px', opacity: 0.8, lineHeight: 1.3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: getForegroundColor(getCourse(1, index + 1, scope.$index)!.id) }">
                                         {{ getCourse(1, index + 1, scope.$index)!.kcdm }} · {{ getCourse(1, index + 1, scope.$index)!.dgjsmc }} · {{ getCourse(1, index + 1, scope.$index)!.skyymc }}
                                     </div>
                                     <div style="margin-top: auto; display: flex; gap: 4px; font-size: 10px; flex-wrap: wrap;">
@@ -46,7 +46,7 @@
             <el-tab-pane label="双周" name="even" style="height: 100%;">
                 <div style="height: 100%; overflow: auto;">
                     <el-table :data="timeSlots" border style="width: 100%; height: 100%; user-select: none;"
-                        :row-style="{ height: '100px' }" :cell-style="({ rowIndex, columnIndex }) => {
+                        :row-style="{ height: '92px' }" :cell-style="({ rowIndex, columnIndex }) => {
                             if (columnIndex === 0) return {};
                             const course = getCourse(2, columnIndex, rowIndex);
                             if (!course) return {};
@@ -65,10 +65,10 @@
                                     :style="{ ...getCourseStyle(getCourse(2, index + 1, scope.$index)!.id), position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, padding: '6px 8px', display: 'flex', flexDirection: 'column' }"
                                     @click="changeColor(getCourse(2, index + 1, scope.$index)!.id)"
                                     @contextmenu.prevent="showContextMenu($event, getCourse(2, index + 1, scope.$index)!, 2, index + 1, scope.$index)">
-                                    <div style="font-size: 12px; font-weight: 600; line-height: 1.3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                                    <div style="font-size: 13px; font-weight: 600; line-height: 1.3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
                                         {{ getCourse(2, index + 1, scope.$index)!.kcmc }}
                                     </div>
-                                    <div :style="{ fontSize: '10px', opacity: 0.8, lineHeight: 1.3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: getForegroundColor(getCourse(2, index + 1, scope.$index)!.id) }">
+                                    <div :style="{ fontSize: '11px', opacity: 0.8, lineHeight: 1.3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: getForegroundColor(getCourse(2, index + 1, scope.$index)!.id) }">
                                         {{ getCourse(2, index + 1, scope.$index)!.kcdm }} · {{ getCourse(2, index + 1, scope.$index)!.dgjsmc }} · {{ getCourse(2, index + 1, scope.$index)!.skyymc }}
                                     </div>
                                     <div style="margin-top: auto; display: flex; gap: 4px; font-size: 10px; flex-wrap: wrap;">
