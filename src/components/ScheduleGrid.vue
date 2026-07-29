@@ -114,7 +114,6 @@
 <script setup lang="ts">
     import { ElMessage, ElMessageBox } from 'element-plus';
     import type { Course, CourseBundle } from '@/types';
-    import { TIME_SLOTS, WEEK_DAYS } from '@/utils/scheduleAlgo';
     import { findCourseAtTime } from '@/utils/courseTimeParser';
     import { isLabId, hasCatalogLab, getBaseCourseId } from '@/utils/courseRelation';
     import { store } from '../store/courseStore';
@@ -135,6 +134,10 @@
         if (isLabId(course.id)) return true;
         return hasCatalogLab(props.allCourses, getBaseCourseId(course.id));
     }
+
+    const activeTab = ref('odd');
+    const timeSlots = TIME_SLOTS;
+    const weekDays = WEEK_DAYS;
     const menuVisible = ref(false);
     const menuStyle = reactive({ top: '0px', left: '0px' });
     const contextCourse = ref<Course | null>(null);
@@ -192,26 +195,6 @@
             display: 'flex',
             flexDirection: 'column' as const,
             justifyContent: 'center'
-        };
-    }
-
-    function getMetaTextStyle (id: string) {
-        return {
-            fontSize: '12px',
-            opacity: 0.95,
-            color: getForegroundColor(id),
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            whiteSpace: 'nowrap'
-        };
-    }
-
-    function getSubTextStyle (id: string) {
-        return {
-            fontSize: '12px',
-            opacity: 0.88,
-            color: getForegroundColor(id),
-            marginTop: '2px'
         };
     }
 
