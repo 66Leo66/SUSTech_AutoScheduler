@@ -456,6 +456,25 @@ export async function fetchCourses (options?: { forceRefresh?: boolean; maxAgeMs
     const isSameSemester = !requestedKey || cachedSemesterKey === requestedKey;
     const isFresh = (ageBase?: number | null) => ageBase !== undefined && ageBase !== null && now - ageBase <= maxAgeMs;
 
+    // Prefer the live TIS bridge whenever the userscript is connected. A fresh
+    // static cache must not hide newer course data from the current TIS page.
+    const injectData = await fetchViaInject(options?.semester).catch(() => null);
+    if (injectData && injectData.courses.length) {
+        cachedCourses = injectData.courses;
+        cachedUpdatedAt = now;
+        cachedCachedAt = now;
+        cachedSemesterKey = injectData.semester.xnxq ?? injectData.semester.label;
+        const payload: CachedPayload = { courses: injectData.courses, updatedAt: cachedUpdatedAt, cachedAt: cachedCachedAt, semesterKey: cachedSemesterKey ?? undefined };
+        saveCache(payload);
+        return {
+            courses: injectData.courses,
+            updatedAt: cachedUpdatedAt,
+            fromCache: false,
+            source: 'inject',
+            semester: injectData.semester
+        };
+    }
+
     if (!options?.forceRefresh && cachedCourses && isSameSemester) {
         const ageBase = cachedCachedAt ?? cachedUpdatedAt;
         if (isFresh(ageBase)) {
@@ -483,22 +502,6 @@ export async function fetchCourses (options?: { forceRefresh?: boolean; maxAgeMs
                 semester: deriveSemesterMeta(cached.courses)
             };
         }
-    }
-
-    const injectData = await fetchViaInject(options?.semester).catch(() => null);
-    if (injectData && injectData.courses.length) {
-        cachedCourses = injectData.courses;
-        cachedUpdatedAt = now;
-        cachedCachedAt = now;
-        const payload: CachedPayload = { courses: injectData.courses, updatedAt: cachedUpdatedAt, cachedAt: cachedCachedAt, semesterKey: cachedSemesterKey ?? undefined };
-        saveCache(payload);
-        return {
-            courses: injectData.courses,
-            updatedAt: cachedUpdatedAt,
-            fromCache: false,
-            source: 'inject',
-            semester: injectData.semester
-        };
     }
 
     try {

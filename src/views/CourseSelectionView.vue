@@ -184,10 +184,10 @@
                                         <span class="selected-course-group-name">{{ group.name }}</span>
                                         <el-tag size="small" effect="plain">{{ group.courses.length }} 个班次</el-tag>
                                     </div>
-                                    <el-button link type="danger" title="移除整组课程"
-                                        @click.stop="store.removeCourseGroup(group.name)">
-                                        <el-icon><Close /></el-icon>
-                                    </el-button>
+                                    <el-switch :model-value="isCourseGroupActive(group)" size="small"
+                                        title="启用/停用整组课程"
+                                        @change="val => handleToggleGroupActive(group.name, !!val)"
+                                        @click.stop />
                                 </div>
                                 <div v-for="course in group.courses" :key="course.id" class="selected-course-entry">
                                     <div style="display: flex; flex-direction: column; min-width: 0;">
@@ -424,6 +424,12 @@
         if (dragIndex.value === null) return;
         store.reorderCourseGroups(dragIndex.value, dropIndex);
         dragIndex.value = null;
+    };
+
+    const isCourseGroupActive = (group: { courses: Course[] }) => group.courses.every(course => course.active !== false);
+
+    const handleToggleGroupActive = (name: string, isActive: boolean) => {
+        store.toggleCourseGroupActive(name, isActive);
     };
 
     const handleClearSelection = () => {

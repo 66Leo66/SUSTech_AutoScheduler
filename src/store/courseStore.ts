@@ -93,13 +93,6 @@ export const store = reactive({
         saveSelectedCourses(this.selectedCourses);
     },
 
-    removeCourseGroup (name: string) {
-        for (let i = this.selectedCourses.length - 1; i >= 0; i--) {
-            if (this.selectedCourses[i]?.kcmc === name) this.selectedCourses.splice(i, 1);
-        }
-        saveSelectedCourses(this.selectedCourses);
-    },
-
     reorderCourseGroups (from: number, to: number) {
         const groups = groupCoursesByName(this.selectedCourses);
         if (from === to || !groups[from] || !groups[to]) return;
