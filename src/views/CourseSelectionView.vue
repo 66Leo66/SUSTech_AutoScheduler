@@ -20,12 +20,21 @@
             <el-main style="display: flex; flex-direction: column; padding: 0;">
                 <div style="padding: 20px;">
                     <h2 style="margin-top: 0;">搜索课程</h2>
-                    <el-input v-model="searchQuery" placeholder="输入课程名或教师名(I) | Ctrl+Shift+A 全选 Ctrl+Shift+D 反选"
+                    <el-input v-model="searchQuery" placeholder="输入关键词，勾选搜索范围 (I) | Ctrl+Shift+A 全选 Ctrl+Shift+D 反选"
                         :prefix-icon="Search" clearable @input="onSearch">
                         <template #append>
                             <el-button @click="onSearch">搜索</el-button>
                         </template>
                     </el-input>
+                    <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 8px;">
+                        <span style="font-size: 12px; color: var(--el-text-color-secondary);">搜索范围</span>
+                        <el-checkbox-group v-model="searchFields" size="small" :min="1" @change="onSearch">
+                            <el-checkbox label="name">课程名称</el-checkbox>
+                            <el-checkbox label="code">课程代码</el-checkbox>
+                            <el-checkbox label="description">课程描述</el-checkbox>
+                            <el-checkbox label="teacher">教师</el-checkbox>
+                        </el-checkbox-group>
+                    </div>
                     <div
                         style="margin: 6px 0 10px; font-size: 12px; color: var(--el-text-color-secondary); display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
                         <span v-if="availableSemesters.length <= 1">当前学期：{{ semesterLabel }}</span>
@@ -224,6 +233,8 @@
     const { courses: allCourses, lastUpdatedTs, semesterLabel, dataSource, isUpdating, loading, loadedCourseCount, availableSemesters, selectedSemester, refreshCourses, discoverSemesters, selectSemester, startAutoRefresh } = useCourseData();
     const searchQuery = ref('');
     const searchResults = ref<Course[]>([]);
+    type SearchField = 'name' | 'code' | 'description' | 'teacher';
+    const searchFields = ref<SearchField[]>(['name', 'code', 'description', 'teacher']);
     const exampleKeywords = ['软件工程', '操作系统', '音乐赏析', '数学', '英语'];
     const firstExample = computed(() => exampleKeywords[0] || '');
     const generating = ref(false);
@@ -383,15 +394,16 @@
         const keywords = searchQuery.value.toLowerCase().trim().split(/\s+/).filter(k => k.length > 0);
 
         searchResults.value = allCourses.value.filter(c => {
-            const courseName = (c.kcmc || '').toLowerCase();
-            const teacherName = (c.dgjsmc || '').toLowerCase();
-            const courseCode = (c.kcdm || '').toLowerCase();
-            const className = (c.rwmc || '').toLowerCase();
-            const courseInfo = `${courseName} ${teacherName} ${courseCode} ${className}`;
-
-            // 所有关键词都必须匹配
-            return keywords.every(keyword => courseInfo.includes(keyword));
-        }).slice(0, 50); // Limit results for performance
+            const fields: Record<SearchField, string> = {
+                name: c.kcmc,
+                code: c.kcdm,
+                description: c.info || '',
+                teacher: c.dgjsmc
+            };
+            return keywords.every(keyword => searchFields.value.some(field =>
+                (fields[field] || '').toLowerCase().includes(keyword)
+            ));
+        });
     };
 
     const applyExample = (keyword: string) => {
@@ -541,6 +553,8 @@
 
     .course-card {
         cursor: pointer;
+        content-visibility: auto;
+        contain-intrinsic-size: 120px;
     }
 
     .course-title {
