@@ -116,38 +116,40 @@
                         暂无课程
                     </div>
                     <transition-group v-else name="list">
-                        <div v-for="(course, index) in store.selectedCourses" :key="course.id"
-                            :style="{ borderTop: index > 0 && store.selectedCourses[index - 1]?.kcmc !== course.kcmc ? '2px solid var(--el-border-color)' : '1px solid var(--el-border-color-lighter)' }"
-                            style="display: flex; align-items: center; padding: 10px 0; cursor: move;"
-                            draggable="true" @dragstart="dragStart(index)" @drop="onDrop(index)" @dragenter.prevent
-                            @dragover.prevent>
-                            <div style="margin-right: 10px; cursor: grab; color: var(--el-text-color-secondary);">
-                                <el-icon>
-                                    <Rank />
-                                </el-icon>
+                        <div v-for="(group, groupIndex) in selectedCourseGroups" :key="group.name"
+                            class="selected-course-group" draggable="true" @dragstart="dragStart(groupIndex)"
+                            @drop="onDrop(groupIndex)" @dragenter.prevent @dragover.prevent>
+                            <div class="selected-course-group-header">
+                                <div style="display: flex; align-items: center; gap: 8px; min-width: 0;">
+                                    <el-icon class="group-drag-handle"><Rank /></el-icon>
+                                    <span class="selected-course-group-name">{{ group.name }}</span>
+                                    <el-tag size="small" effect="plain">{{ group.courses.length }} 个班次</el-tag>
+                                </div>
+                                <el-switch :model-value="isCourseGroupActive(group)" size="small"
+                                    @change="val => handleToggleGroupActive(group.name, !!val)"
+                                    @click.stop />
                             </div>
-                            <div style="flex: 1; min-width: 0;">
-                                <div style="display: flex; align-items: baseline; gap: 6px;">
-                                    <span style="font-weight: 500; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ course.kcmc }}</span>
-                                    <span style="font-size: 11px; opacity: 0.55; flex-shrink: 0;">{{ course.kcdm }}</span>
+                            <div v-for="course in group.courses" :key="course.id" class="selected-course-entry">
+                                <div style="flex: 1; min-width: 0;">
+                                    <div style="display: flex; align-items: baseline; gap: 6px;">
+                                        <span style="font-size: 11px; opacity: 0.55; flex-shrink: 0;">{{ course.kcdm }}</span>
+                                        <span class="course-ellipsis">{{ course.rwmc }}</span>
+                                    </div>
+                                    <div style="font-size: 11px; color: var(--el-text-color-secondary); margin-top: 2px; display: flex; align-items: center; gap: 4px; flex-wrap: wrap;">
+                                        <span>{{ course.dgjsmc }}</span>
+                                        <span>· {{ formatCapacity(course) }}</span>
+                                        <el-tag v-if="hasFullCapacity(course)" size="small" effect="plain"
+                                            :type="capacityStatusType(course)" style="font-size: 10px;">
+                                            {{ capacityStatusType(course) === 'danger' ? '超额' : '实时' }}
+                                        </el-tag>
+                                    </div>
+                                    <div v-if="(course.time || []).length" style="font-size: 11px; color: var(--el-text-color-secondary); margin-top: 1px;">
+                                        {{ formatCourseTimes(course.time || []).join('；') }}
+                                    </div>
                                 </div>
-                                <div style="font-size: 11px; color: var(--el-text-color-secondary); margin-top: 2px;">
-                                    {{ course.rwmc }}
-                                </div>
-                                <div style="font-size: 11px; color: var(--el-text-color-secondary); margin-top: 2px; display: flex; align-items: center; gap: 4px; flex-wrap: wrap;">
-                                    <span>{{ course.dgjsmc }}</span>
-                                    <span>· {{ formatCapacity(course) }}</span>
-                                    <el-tag v-if="hasFullCapacity(course)" size="small" effect="plain"
-                                        :type="capacityStatusType(course)" style="font-size: 10px;">
-                                        {{ capacityStatusType(course) === 'danger' ? '超额' : '实时' }}
-                                    </el-tag>
-                                </div>
-                                <div v-if="(course.time || []).length" style="font-size: 11px; color: var(--el-text-color-secondary); margin-top: 1px;">
-                                    {{ formatCourseTimes(course.time || []).join('；') }}
-                                </div>
+                                <el-switch :model-value="course.active !== false" size="small"
+                                    @change="val => handleToggleActive(course.id, !!val)" @click.stop />
                             </div>
-                            <el-switch :model-value="course.active !== false" size="small"
-                                @change="val => handleToggleActive(course.id, !!val)" style="margin-left: 8px; flex-shrink: 0;" />
                         </div>
                     </transition-group>
                 </el-scrollbar>
@@ -190,7 +192,7 @@
     const buildTime = __BUILD_TIME__;
 
     useMobileDetection();
-    import { store } from '../store/courseStore';
+    import { groupCoursesByName, store } from '../store/courseStore';
     import ScheduleGrid from '../components/ScheduleGrid.vue';
     import html2canvas from 'html2canvas';
     import { arrangeSchedule, TIME_SLOTS, WEEK_DAYS } from '../utils/scheduleAlgo';
@@ -202,6 +204,7 @@
     const router = useRouter();
     const scheduleRef = ref<HTMLElement | null>(null);
     const dragIndex = ref<number | null>(null);
+    const selectedCourseGroups = computed(() => groupCoursesByName(store.selectedCourses));
     const semesterStartDate = ref<Date>(new Date('2026-02-23')); // 默认学期开始日期
     const showBlockDialog = ref(false);
     const syncBothWeeks = ref(true);
@@ -297,6 +300,13 @@
         debouncedGenerate();
     };
 
+    const isCourseGroupActive = (group: { courses: Course[] }) => group.courses.every(course => course.active !== false);
+
+    const handleToggleGroupActive = (name: string, isActive: boolean) => {
+        store.toggleCourseGroupActive(name, isActive);
+        debouncedGenerate();
+    };
+
     const jumpPages = (direction: 'prev' | 'next') => {
         const jumpSize = Math.max(1, Math.floor(totalPages.value * 0.1));
         if (direction === 'prev') {
@@ -344,13 +354,7 @@
 
     const onDrop = (dropIndex: number) => {
         if (dragIndex.value === null) return;
-        if (dragIndex.value === dropIndex) return;
-
-        const item = store.selectedCourses[dragIndex.value];
-        if (!item) return;
-
-        store.selectedCourses.splice(dragIndex.value, 1);
-        store.selectedCourses.splice(dropIndex, 0, item);
+        store.reorderCourseGroups(dragIndex.value, dropIndex);
         dragIndex.value = null;
 
         // Re-generate
@@ -494,6 +498,46 @@
     .build-time {
         color: var(--el-text-color-secondary);
         font-size: 12px;
+        white-space: nowrap;
+    }
+
+    .selected-course-group {
+        border-bottom: 1px solid var(--el-border-color-lighter);
+        cursor: move;
+    }
+
+    .selected-course-group-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        padding: 10px 0 6px;
+    }
+
+    .selected-course-group-name {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        font-weight: 500;
+        font-size: 13px;
+    }
+
+    .group-drag-handle {
+        color: var(--el-text-color-secondary);
+        cursor: grab;
+        flex-shrink: 0;
+    }
+
+    .selected-course-entry {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 4px 0 8px 24px;
+    }
+
+    .course-ellipsis {
+        overflow: hidden;
+        text-overflow: ellipsis;
         white-space: nowrap;
     }
 

@@ -47,6 +47,21 @@ function saveSelectedCourses (courses: Course[]) {
     }
 }
 
+export type CourseGroup = { name: string; courses: Course[] };
+
+export function groupCoursesByName (courses: Course[]): CourseGroup[] {
+    const groups = new Map<string, CourseGroup>();
+    courses.forEach(course => {
+        let group = groups.get(course.kcmc);
+        if (!group) {
+            group = { name: course.kcmc, courses: [] };
+            groups.set(course.kcmc, group);
+        }
+        group.courses.push(course);
+    });
+    return [...groups.values()];
+}
+
 export const store = reactive({
     selectedCourses: loadSelectedCourses() as Course[],
     blockedSlots: loadBlockedSlots() as string[],
@@ -69,6 +84,30 @@ export const store = reactive({
 
     isSelected (course: Course) {
         return this.selectedCourses.some(c => c.id === course.id);
+    },
+
+    toggleCourseGroupActive (name: string, isActive: boolean) {
+        this.selectedCourses.forEach(course => {
+            if (course.kcmc === name) course.active = isActive;
+        });
+        saveSelectedCourses(this.selectedCourses);
+    },
+
+    removeCourseGroup (name: string) {
+        for (let i = this.selectedCourses.length - 1; i >= 0; i--) {
+            if (this.selectedCourses[i]?.kcmc === name) this.selectedCourses.splice(i, 1);
+        }
+        saveSelectedCourses(this.selectedCourses);
+    },
+
+    reorderCourseGroups (from: number, to: number) {
+        const groups = groupCoursesByName(this.selectedCourses);
+        if (from === to || !groups[from] || !groups[to]) return;
+        const [moved] = groups.splice(from, 1);
+        if (!moved) return;
+        groups.splice(to, 0, moved);
+        this.selectedCourses.splice(0, this.selectedCourses.length, ...groups.flatMap(group => group.courses));
+        saveSelectedCourses(this.selectedCourses);
     },
 
     toggleCourseActive (courseId: string, isActive: boolean) {

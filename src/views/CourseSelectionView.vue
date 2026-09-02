@@ -175,34 +175,30 @@
                     </div>
                     <div v-else>
                         <transition-group name="list">
-                            <div v-for="(course, index) in store.selectedCourses" :key="course.id"
-                                style="display: flex; align-items: center; padding: 10px; border-bottom: 1px solid var(--el-border-color-lighter); cursor: move;"
-                                draggable="true" @dragstart="dragStart(index)" @drop="onDrop(index)" @dragenter.prevent
-                                @dragover.prevent>
-                                <div style="margin-right: 10px; cursor: grab; color: var(--el-text-color-secondary);">
-                                    <el-icon>
-                                        <Rank />
-                                    </el-icon>
+                            <div v-for="(group, groupIndex) in selectedCourseGroups" :key="group.name"
+                                class="selected-course-group" draggable="true" @dragstart="dragStart(groupIndex)"
+                                @drop="onDrop(groupIndex)" @dragenter.prevent @dragover.prevent>
+                                <div class="selected-course-group-header">
+                                    <div style="display: flex; align-items: center; gap: 8px; min-width: 0;">
+                                        <el-icon class="group-drag-handle"><Rank /></el-icon>
+                                        <span class="selected-course-group-name">{{ group.name }}</span>
+                                        <el-tag size="small" effect="plain">{{ group.courses.length }} 个班次</el-tag>
+                                    </div>
+                                    <el-button link type="danger" title="移除整组课程"
+                                        @click.stop="store.removeCourseGroup(group.name)">
+                                        <el-icon><Close /></el-icon>
+                                    </el-button>
                                 </div>
-                                <div
-                                    style="flex: 1; display: flex; justify-content: space-between; align-items: center;">
-                                    <div style="display: flex; flex-direction: column;">
-                                        <span style="font-weight: 400;">{{ course.kcmc }}</span>
-                                        <span style="font-size: 12px; color: var(--el-text-color-secondary);">{{
-                                            course.dgjsmc
-                                            }}</span>
-                                        <span
-                                            style="font-size: 12px; color: var(--el-text-color-secondary); margin-top: 2px;">
+                                <div v-for="course in group.courses" :key="course.id" class="selected-course-entry">
+                                    <div style="display: flex; flex-direction: column; min-width: 0;">
+                                        <span class="course-ellipsis">{{ course.dgjsmc }}</span>
+                                        <span style="font-size: 12px; color: var(--el-text-color-secondary); margin-top: 2px;">
                                             人数：{{ formatCapacity(course) }}
                                         </span>
                                     </div>
-                                    <div style="display: flex; align-items: center;">
-                                        <el-button link type="danger" @click="store.toggleCourseSelection(course)">
-                                            <el-icon>
-                                                <Close />
-                                            </el-icon>
-                                        </el-button>
-                                    </div>
+                                    <el-button link type="danger" title="移除班次" @click.stop="store.toggleCourseSelection(course)">
+                                        <el-icon><Close /></el-icon>
+                                    </el-button>
                                 </div>
                             </div>
                         </transition-group>
@@ -224,7 +220,7 @@
     import { Search, Rank, QuestionFilled, HomeFilled, Close, Loading, Refresh } from '@element-plus/icons-vue';
     import { useMobileDetection } from '../composables/useMobileDetection';
     import { useCourseData } from '../composables/useCourseData';
-    import { store } from '../store/courseStore';
+    import { groupCoursesByName, store } from '../store/courseStore';
     import { arrangeSchedule } from '../utils/scheduleAlgo';
     import { isLabId, getBaseCourseId, hasCatalogLab, hasSelectedLab, hasSelectedLecture } from '@/utils/courseRelation';
     import { formatCourseTimes } from '@/utils/timeCode';
@@ -243,6 +239,7 @@
     const firstExample = computed(() => exampleKeywords[0] || '');
     const generating = ref(false);
     const dragIndex = ref<number | null>(null);
+    const selectedCourseGroups = computed(() => groupCoursesByName(store.selectedCourses));
     const injectConnected = ref(false);
     const selectedSemesterKey = computed({
         get: () => selectedSemester.value?.xnxq ?? selectedSemester.value?.label ?? '',
@@ -425,10 +422,7 @@
 
     const onDrop = (dropIndex: number) => {
         if (dragIndex.value === null) return;
-        const item = store.selectedCourses[dragIndex.value];
-        if (!item) return;
-        store.selectedCourses.splice(dragIndex.value, 1);
-        store.selectedCourses.splice(dropIndex, 0, item);
+        store.reorderCourseGroups(dragIndex.value, dropIndex);
         dragIndex.value = null;
     };
 
@@ -595,5 +589,40 @@
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
+    }
+
+    .selected-course-group {
+        border-bottom: 1px solid var(--el-border-color-lighter);
+        cursor: move;
+    }
+
+    .selected-course-group-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        padding: 10px 0 6px;
+    }
+
+    .selected-course-group-name {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        font-weight: 500;
+    }
+
+    .group-drag-handle {
+        color: var(--el-text-color-secondary);
+        cursor: grab;
+        flex-shrink: 0;
+    }
+
+    .selected-course-entry {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        padding: 4px 0 8px 24px;
+        font-size: 12px;
     }
 </style>
