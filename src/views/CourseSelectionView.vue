@@ -9,11 +9,14 @@
                 返回首页
             </el-button>
             <h2 style="margin: 0;">选课管理</h2>
-            <el-button link @click="$router.push('/help')" style="color: var(--el-text-color-secondary);">
-                <el-icon>
-                    <QuestionFilled />
-                </el-icon>
-            </el-button>
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <span class="build-time">构建于 {{ buildTime }}</span>
+                <el-button link @click="$router.push('/help')" style="color: var(--el-text-color-secondary);">
+                    <el-icon>
+                        <QuestionFilled />
+                    </el-icon>
+                </el-button>
+            </div>
         </el-header>
 
         <el-container style="overflow: hidden;">
@@ -59,7 +62,7 @@
                             @click="handleStatusClick"
                             style="white-space: nowrap; flex-shrink: 0; display: inline-flex; align-items: center; cursor: pointer; flex-wrap: nowrap;">
                             <span class="status-tag-content">
-                                <span>{{ isUpdating ? '同步课程中' : `TIS：${injectConnected ? '正常' : '未连接'}` }}</span>
+                                <span>{{ isUpdating ? '同步课程中' : `TIS：${injectConnected ? '已连接' : '未连接'}` }}</span>
                                 <el-icon v-if="isUpdating" class="is-loading" style="margin-left: 2px;">
                                     <Loading />
                                 </el-icon>
@@ -230,6 +233,7 @@
     useMobileDetection();
 
     const router = useRouter();
+    const buildTime = __BUILD_TIME__;
     const { courses: allCourses, lastUpdatedTs, semesterLabel, dataSource, isUpdating, loading, loadedCourseCount, availableSemesters, selectedSemester, refreshCourses, discoverSemesters, selectSemester, startAutoRefresh } = useCourseData();
     const searchQuery = ref('');
     const searchResults = ref<Course[]>([]);
@@ -268,7 +272,10 @@
         gap: '8px',
         gridTemplateColumns: `repeat(${effectiveColumns.value}, minmax(0, 1fr))`
     }));
-    const dataSourceLabel = computed(() => dataSource.value === 'inject' ? 'TIS实时同步' : '静态兜底 lessons.json');
+    const dataSourceLabel = computed(() => {
+        if (dataSource.value === 'inject') return 'TIS实时同步';
+        return injectConnected.value ? '静态兜底 lessons.json（TIS已连接，未使用实时数据）' : '静态兜底 lessons.json';
+    });
     const statusTagType = computed(() => {
         if (isUpdating.value) return 'info';
         return injectConnected.value ? 'success' : 'warning';
@@ -397,7 +404,7 @@
             const fields: Record<SearchField, string> = {
                 name: c.kcmc,
                 code: c.kcdm,
-                description: c.info || '',
+                description: `${c.info || ''} ${c.rwmc || ''}`.trim(),
                 teacher: c.dgjsmc
             };
             return keywords.every(keyword => searchFields.value.some(field =>
@@ -555,6 +562,12 @@
         cursor: pointer;
         content-visibility: auto;
         contain-intrinsic-size: 120px;
+    }
+
+    .build-time {
+        color: var(--el-text-color-secondary);
+        font-size: 12px;
+        white-space: nowrap;
     }
 
     .course-title {

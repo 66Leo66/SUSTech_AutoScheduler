@@ -9,11 +9,14 @@
                 返回选课
             </el-button>
             <h2 style="margin: 0;">课程表</h2>
-            <el-button link @click="$router.push('/help')" style="color: var(--el-text-color-secondary);">
-                <el-icon>
-                    <QuestionFilled />
-                </el-icon>
-            </el-button>
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <span class="build-time">构建于 {{ buildTime }}</span>
+                <el-button link @click="$router.push('/help')" style="color: var(--el-text-color-secondary);">
+                    <el-icon>
+                        <QuestionFilled />
+                    </el-icon>
+                </el-button>
+            </div>
         </el-header>
 
         <el-container style="overflow: hidden;">
@@ -183,6 +186,8 @@
     import type { Course, IncompatibilityReason } from '@/types';
     import { useMobileDetection } from '../composables/useMobileDetection';
     import { useCourseData } from '../composables/useCourseData';
+
+    const buildTime = __BUILD_TIME__;
 
     useMobileDetection();
     import { store } from '../store/courseStore';
@@ -486,6 +491,12 @@
 </script>
 
 <style scoped>
+    .build-time {
+        color: var(--el-text-color-secondary);
+        font-size: 12px;
+        white-space: nowrap;
+    }
+
     /* Keep vertical/horizontal scrollbars consistent in the schedule area */
     .schedule-scroll::-webkit-scrollbar {
         width: 8px;
