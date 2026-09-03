@@ -132,7 +132,14 @@
                                 </div>
                                 <div class="course-line">
                                     <span>Code: {{ course.kcdm }}</span>
-                                    <span class="course-ellipsis">{{ course.dgjsmc }}</span>
+                                    <a
+                                        v-if="course.dgjsmc?.trim()"
+                                        class="course-ellipsis course-teacher-link"
+                                        :href="ncesSearchUrl(course.dgjsmc)"
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        @click.stop
+                                    >{{ course.dgjsmc }}</a>
                                 </div>
                                 <div class="course-line course-secondary">
                                     <span>人数：{{ formatCapacity(course) }}</span>
@@ -288,6 +295,7 @@
         return `${mm}-${dd} ${hh}:${mi}`;
     });
     const formatTimeSummary = (course: Course) => formatCourseTimes(course.time || [], 2);
+    const ncesSearchUrl = (query: string) => `https://ncesnext.com/search/?q=${encodeURIComponent(query.trim())}`;
 
     const hasFullCapacity = (course: Course) => typeof course.yxzrs === 'number' && typeof course.bksrl === 'number' && (course.bksrl ?? 0) > 0;
     const formatCapacity = (course: Course) => {
@@ -595,6 +603,15 @@
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
+    }
+
+    .course-teacher-link {
+        color: var(--el-color-primary);
+        text-decoration: none;
+    }
+
+    .course-teacher-link:hover {
+        text-decoration: underline;
     }
 
     .selected-course-group {
